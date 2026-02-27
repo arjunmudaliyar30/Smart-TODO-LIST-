@@ -75,7 +75,7 @@
           fullName: document.getElementById('fullName').value,
           email: document.getElementById('email').value,
           password: document.getElementById('password').value,
-          phoneNumber: document.getElementById('phone').value || null
+          phoneNumber: (document.getElementById('phone') || {value: null}).value || null
         });
         localStorage.setItem('token', data.token);
         localStorage.setItem('userId', data.userId);
