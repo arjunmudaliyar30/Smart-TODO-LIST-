@@ -2,6 +2,27 @@
    dashboard.js — Mobile-first dashboard controller
    ============================================================ */
 
+// ---- Theme (Day / Night) ----
+(function () {
+  if (localStorage.getItem('theme') === 'light') {
+    document.body.classList.add('light-mode');
+  }
+})();
+
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light-mode');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = isLight ? '\uD83C\uDF19' : '\uD83C\uDF1E';
+}
+
+// Apply correct icon on load
+window.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent =
+    document.body.classList.contains('light-mode') ? '\uD83C\uDF19' : '\uD83C\uDF1E';
+});
+
 // ---- Auth guard ----
 (function () {
   if (!isTokenValid()) {
