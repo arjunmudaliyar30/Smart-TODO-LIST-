@@ -1,0 +1,290 @@
+/* ============================================================
+   auth.css — Login & Register pages
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── PWA Install bar — fixed at top ── */
+.pwa-install-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: rgba(26,29,46,0.97);
+  border-bottom: 1px solid rgba(108,99,255,0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 200;
+  font-size: 12px;
+  color: rgba(226,232,240,0.75);
+  letter-spacing: 0.03em;
+}
+.pwa-install-bar.hidden { display: none; }
+.pwa-install-bar__text { flex: 1; text-align: center; }
+.pwa-install-bar__btn {
+  padding: 5px 18px;
+  background: #6c63ff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pwa-install-bar__btn:hover { background: #8a84ff; }
+.pwa-install-bar__close {
+  background: none;
+  border: none;
+  color: rgba(226,232,240,0.35);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+.pwa-install-bar__close:hover { color: rgba(226,232,240,0.7); }
+
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d2e;
+  --surface2: #252840;
+  --accent: #6c63ff;
+  --accent-h: #8a84ff;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --error: #f87171;
+  --success: #34d399;
+  --border: #2d3054;
+  --radius: 12px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-wrapper {
+  width: 100%;
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+
+.brand {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.brand-icon {
+  font-size: 2.5rem;
+}
+
+/* New PNG/JPG app icon on login/register */
+.brand-logo-img {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  object-fit: cover;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 4px 16px rgba(108,99,255,0.35);
+}
+
+.brand h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+  background: linear-gradient(135deg, #6c63ff, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.brand p {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--text-muted);
+}
+
+.form-group input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: var(--text);
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+  outline: none;
+}
+
+.form-group input:focus {
+  border-color: var(--accent);
+}
+
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.875rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn-primary:hover { background: var(--accent-h); }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.error-msg {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid var(--error);
+  color: var(--error);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.hidden { display: none !important; }
+
+.switch-link {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.switch-link a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.switch-link a:hover { text-decoration: underline; }
+
+/* ---- Forgot password link ---- */
+.forgot-link {
+  text-align: center;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+.forgot-link a { color: var(--text-muted); text-decoration: none; }
+.forgot-link a:hover { color: var(--accent); }
+
+/* ---- Forgot password steps ---- */
+.fp-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.fp-back {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 0;
+  flex-shrink: 0;
+}
+.fp-back:hover { opacity: 0.8; }
+.fp-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.fp-steps {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+.fp-dot {
+  width: 28px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 0.25s;
+}
+.fp-dot.active  { background: var(--accent); }
+.fp-dot.done    { background: var(--success); }
+.fp-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+.fp-resend {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 0.75rem;
+}
+.fp-resend a { color: var(--accent); text-decoration: none; }
+.fp-resend a:hover { text-decoration: underline; }
+
+/* ---- Success screen ---- */
+.fp-success {
+  text-align: center;
+  padding: 1rem 0;
+}
+.fp-success-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(52, 211, 153, 0.15);
+  border: 2px solid var(--success);
+  color: var(--success);
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+.fp-success p {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: var(--text);
+}
+
+.optional {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}

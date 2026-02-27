@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <title>SMART TODO</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml"/>
+  <link rel="apple-touch-icon" href="assets/icon.svg"/>
+  <meta name="theme-color" content="#000000"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Background ── */
+    .splash-bg {
+      position: fixed; inset: 0;
+      background: url('assets/richmindset.jpg') center center / cover no-repeat;
+      /* transform: scale(5);
+      animation: slowZoom 15s ease-out forwards;
+      will-change: transform; */
+    }
+
+    @keyframes slowZoom {
+      from { transform: scale(1.06); }
+      to   { transform: scale(1.00); }
+    }
+
+    /* ── Dark overlay ── */
+    .splash-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.70);
+      backdrop-filter: blur(1px);
+      -webkit-backdrop-filter: blur(1px);
+    }
+
+    /* ── Vignette ── */
+    .splash-vignette {
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse at center,
+        transparent 50%,
+        rgba(0,0,0,0.55) 75%,
+        rgba(0,0,0,0.85) 100%);
+      pointer-events: none;
+    }
+
+    /* ── Foreground ── */
+    .splash-fg {
+      position: fixed; inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: max(env(safe-area-inset-top, 0px) + 48px, 56px) 32px
+               max(env(safe-area-inset-bottom, 0px) + 40px, 52px);
+      text-align: center;
+    }
+
+    /* ── Top brand label ── */
+    .brand-label {
+      letter-spacing: 0.28em;
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.38);
+      opacity: 0;
+      animation: fadeUp 0.6s ease 0.3s forwards;
+    }
+
+    /* ── Center block ── */
+    .center-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      opacity: 0;
+      animation: fadeUp 0.7s ease 0.55s forwards;
+    }
+
+    .headline {
+      font-size: clamp(30px, 9vw, 46px);
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+
+    .subline {
+      font-size: clamp(13px, 3.5vw, 16px);
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.38);
+    }
+
+    .streak-line {
+      margin-top: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+      min-height: 16px;
+      transition: opacity 0.4s;
+    }
+
+    /* ── Bottom action block ── */
+    .bottom-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 0.2s forwards;
+    }
+
+    /* Loading dots — shown while auth check runs */
+    .loading-dots {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .loading-dots span {
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.35);
+      animation: dotPulse 1.2s ease-in-out infinite;
+    }
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dotPulse {
+      0%, 80%, 100% { opacity: 0.35; transform: scale(1); }
+      40%           { opacity: 1;    transform: scale(1.4); }
+    }
+
+    /* Action button — ENTER or SIGN IN */
+    .action-btn {
+      padding: 13px 52px;
+      border: 1.5px solid rgba(255,255,255,0.35);
+      border-radius: 2px;
+      background: transparent;
+      color: rgba(255,255,255,0.92);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.4s ease, transform 0.4s ease,
+                  background 0.2s, border-color 0.2s;
+      display: none;
+    }
+    .action-btn.visible {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .action-btn:hover  { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.55); }
+    .action-btn:active { background: rgba(255,255,255,0.16); }
+
+    /* ── Shared animation ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Exit: fade to black ── */
+    .splash-exit {
+      animation: fadeToBlack 0.45s ease forwards !important;
+    }
+
+    @keyframes fadeToBlack {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Layer 1: background image -->
+  <div class="splash-bg" id="splashBg"></div>
+
+  <!-- Layer 2: dark overlay -->
+  <div class="splash-overlay"></div>
+
+  <!-- Layer 3: vignette -->
+  <div class="splash-vignette"></div>
+
+  <!-- Layer 4: foreground -->
+  <div class="splash-fg" id="splashFg">
+
+    <!-- TOP -->
+    <!-- <div class="brand-label">Performance System</div> -->
+
+    <!-- CENTER -->
+    <div class="center-block">
+      <h1 class="headline">WORK IN SILENCE.</h1>
+      <p class="subline">Let results speak.</p>
+      <p class="streak-line" id="streakLine">&nbsp;</p>
+    </div>
+
+    <!-- BOTTOM -->
+    <div class="bottom-block" id="bottomBlock">
+      <!-- Shown while auth check is running -->
+      <div class="loading-dots" id="loadingDots">
+        <span></span><span></span><span></span>
+      </div>
+      <!-- Tap to proceed -->
+      <button class="action-btn" id="actionBtn"></button>
+    </div>
+
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    (async function () {
+      const MIN_MS    = 1800; // minimum splash presence
+      const AUTO_MS   = 8000; // auto-navigate if user doesn’t tap
+      const started   = Date.now();
+      let   _destUrl  = null;
+      let   _autoTimer = null;
+
+      // ── Fade + navigate ──
+      function goTo(url) {
+        if (_autoTimer) clearTimeout(_autoTimer);
+        document.body.style.transition = 'opacity 0.45s ease';
+        document.body.style.opacity = '0';
+        setTimeout(() => window.location.replace(url), 460);
+      }
+
+      // ── After auth resolves: hide dots, reveal button, set auto-fallback ──
+      function resolve(url, label) {
+        _destUrl = url;
+        const dots = document.getElementById('loadingDots');
+        const btn  = document.getElementById('actionBtn');
+        if (dots) dots.style.display = 'none';
+        if (btn)  {
+          btn.textContent = label;
+          const elapsed = Date.now() - started;
+          const wait    = Math.max(0, MIN_MS - elapsed);
+          setTimeout(() => btn.classList.add('visible'), wait);
+        }
+        // Auto-navigate after AUTO_MS in case user doesn’t tap
+        _autoTimer = setTimeout(() => goTo(url), AUTO_MS);
+      }
+
+      // Button tap
+      document.getElementById('actionBtn').addEventListener('click', () => {
+        if (_destUrl) goTo(_destUrl);
+      });
+
+      // ── Load streak line for authenticated users ──
+      async function loadStreakLine(token) {
+        try {
+          const res = await fetch('/api/analytics/streaks', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          const streak = data.currentStreak || data.streak || data.taskStreak || 0;
+          const el = document.getElementById('streakLine');
+          if (el) el.textContent = streak > 0 ? 'Day ' + streak + ' — keep going.' : 'Start your streak today.';
+        } catch (_) { /* silent */ }
+      }
+
+      // ── Auth check ──
+      const token = localStorage.getItem('token');
+
+      if (!token || !isTokenValid()) {
+        // Not logged in — skip splash, go straight to login
+        window.location.replace('login.html');
+        return;
+      }
+
+      // Authenticated — show personalised splash
+      try {
+        const [healthRes] = await Promise.all([
+          fetch('/api/health', { headers: { 'Authorization': 'Bearer ' + token } }),
+          loadStreakLine(token)
+        ]);
+        if (healthRes.ok) {
+          resolve('dashboard.html', 'Enter');
+        } else {
+          // Token rejected server-side — clear and send to login
+          localStorage.removeItem('token');
+          window.location.replace('login.html');
+        }
+      } catch (_) {
+        // Offline — trust local token
+        resolve('dashboard.html', 'Enter');
+      }
+    })();
+  </script>
+
+</body>
+</html>

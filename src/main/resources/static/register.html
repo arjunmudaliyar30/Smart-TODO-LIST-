@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>SMART TODO LIST — Register</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#6c63ff"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="SMART TODO"/>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml"/>
+  <link rel="apple-touch-icon" href="assets/icon.svg"/>
+
+  <link rel="stylesheet" href="css/auth.css"/>
+</head>
+<body>
+  <!-- PWA Install bar — hidden by default, shown only before app is installed -->
+  <div class="pwa-install-bar hidden" id="pwaInstallBar">
+    <span class="pwa-install-bar__text">Add to home screen for the best experience</span>
+    <button class="pwa-install-bar__btn" id="pwaInstallBtn">Install</button>
+    <button class="pwa-install-bar__close" id="pwaInstallClose" aria-label="Dismiss">&times;</button>
+  </div>
+
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="brand">
+        <img src="assets/icon.svg" class="brand-logo-img" alt="SMART TODO"/>
+        <h1>SMART TODO LIST</h1>
+        <p>Start your productivity journey</p>
+      </div>
+
+      <form id="registerForm" novalidate>
+        <div class="form-group">
+          <label for="fullName">Full Name</label>
+          <input type="text" id="fullName" placeholder="Jane Doe" required />
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Min 8 characters" required />
+        </div>
+        <!-- <div class="form-group">
+          <label for="phone">Phone Number <span class="optional">(optional)</span></label>
+          <input type="tel" id="phone" placeholder="+1234567890"/>
+        </div> -->
+        <div id="errorMsg" class="error-msg hidden"></div>
+        <button type="submit" class="btn-primary" id="registerBtn">Create Account</button>
+      </form>
+
+      <p class="switch-link">
+        Already have an account? <a href="login.html">Sign In</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script>
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('registerBtn');
+      const errorEl = document.getElementById('errorMsg');
+      btn.disabled = true;
+      btn.textContent = 'Creating account…';
+      errorEl.classList.add('hidden');
+
+      try {
+        const data = await apiPost('/api/auth/register', {
+          fullName: document.getElementById('fullName').value,
+          email: document.getElementById('email').value,
+          password: document.getElementById('password').value,
+          phoneNumber: document.getElementById('phone').value || null
+        });
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userId', data.userId);
+        localStorage.setItem('fullName', data.fullName);
+        window.location.href = 'index.html';
+      } catch (err) {
+        errorEl.textContent = err.message || 'Registration failed';
+        errorEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+      }
+    });
+  </script>
+
+  <script>
+    // ── PWA Install bar ──
+    (function () {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                        || window.navigator.standalone === true;
+      if (isStandalone) return; // already installed — never show the bar
+      let _prompt = null;
+      const bar = document.getElementById('pwaInstallBar');
+      const btn = document.getElementById('pwaInstallBtn');
+      const cls = document.getElementById('pwaInstallClose');
+      window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault();
+        _prompt = e;
+        bar.classList.remove('hidden');
+      });
+      window.addEventListener('appinstalled', () => {
+        bar.classList.add('hidden');
+        _prompt = null;
+      });
+      btn.addEventListener('click', async () => {
+        if (!_prompt) return;
+        _prompt.prompt();
+        const { outcome } = await _prompt.userChoice;
+        if (outcome === 'accepted') bar.classList.add('hidden');
+        _prompt = null;
+      });
+      cls.addEventListener('click', () => bar.classList.add('hidden'));
+    })();
+  </script>
+</body>
+</html>

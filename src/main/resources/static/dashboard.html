@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <title>SMART TODO LIST</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml"/>
+  <link rel="apple-touch-icon" href="assets/icon.svg"/>
+  <meta name="theme-color" content="#6c63ff"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="SMART TODO"/>
+  <link rel="stylesheet" href="css/dashboard.css"/>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-brand">
+      <img src="assets/icon.svg" class="brand-icon" alt="SMART TODO"/>
+      <span class="brand-text">SMART TODO LIST</span>
+    </div>
+    <div class="header-right">
+      <span id="userGreeting" class="user-greeting"></span>
+      <button id="calendarFab" class="btn-icon-header" title="Open Calendar" onclick="openCalendarOverlay()">&#x1F4C5;</button>
+      <button id="installBtn" class="btn-install hidden">Install</button>
+      <button id="logoutBtn" class="btn-logout">Logout</button>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- TASKS TAB -->
+    <section id="tab-tasks" class="tab-content active">
+      <!-- Streak widget -->
+      <div id="streakWidget" class="streak-widget" style="display:none">
+        <span class="streak-item" id="streakTask" title="Task Streak">🔥 <strong id="streakTaskVal">0</strong></span>
+        <span class="streak-item" id="streakWk" title="Workout Streak">💪 <strong id="streakWkVal">0</strong></span>
+        <span class="streak-item" id="streakCal" title="Calorie Streak">🥗 <strong id="streakCalVal">0</strong></span>
+        <span class="streak-item" id="streakNote" title="Note Streak">📝 <strong id="streakNoteVal">0</strong></span>
+        <span class="streak-sep">|</span>
+        <button class="btn-ghost btn-xs" onclick="openFocusModal()">&#x23F1; Focus</button>
+        <button class="btn-ghost btn-xs" onclick="openWeeklyReport()">&#x1F4CA; Report</button>
+        <button class="btn-ghost btn-xs daily-streak-btn" id="dailyRoutineStreakBtn" onclick="toggleDailyRoutines()" style="display:none">
+          &#x23F0; Daily <span id="dailyRoutinesCount" class="daily-streak-pill">0</span>
+        </button>
+      </div>
+
+      <!-- Daily Routines panel (below streak widget) -->
+      <div id="dailyRoutinesSection" class="daily-bar-body daily-panel-slide" style="display:none">
+        <div id="dailyRoutinesList"></div>
+      </div>
+      <div class="page-header">
+        <h2>My Tasks</h2>
+        <button class="btn-primary" id="openTaskModal">+ New Task</button>
+      </div>
+      <div class="filter-bar-wrap">
+        <div class="task-search-bar">
+          <span class="search-icon">&#x1F50D;</span>
+          <input type="search" id="taskSearchInput" placeholder="Search tasks…" autocomplete="off"/>
+          <button id="clearTaskSearch" class="clear-search hidden" title="Clear">&#x2715;</button>
+        </div>
+        <div class="filter-bar">
+          <select id="taskStatusFilter">
+            <option value="">All Status</option>
+            <option value="PENDING">Pending</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="DONE">Done</option>
+          </select>
+          <select id="taskSectionFilter">
+            <option value="">All Sections</option>
+            <option value="__DAILY__">📅 Daily Tasks</option>
+          </select>
+        </div>
+      </div>
+      <!-- Daily Routines moved to streak widget area above -->
+      <div id="taskList" class="task-sections-wrap">
+        <div class="loading">Loading tasks&hellip;</div>
+      </div>
+
+      <!-- Daily Routines collapsible bar removed (now in streak widget) -->
+    </section>
+
+    <!-- GOALS TAB -->
+    <section id="tab-goals" class="tab-content">
+      <div class="page-header">
+        <h2>My Goals</h2>
+        <button class="btn-primary" id="openGoalModal">+ New Goal</button>
+      </div>
+      <div id="goalList" class="card-grid">
+        <div class="loading">Loading goals&hellip;</div>
+      </div>
+    </section>
+
+    <!-- FITNESS TAB — PERFORMANCE SYSTEM -->
+    <section id="tab-workouts" class="tab-content">
+      <div class="page-header" style="margin-bottom:0.75rem">
+        <h2>&#x1F3CB; Performance</h2>
+      </div>
+
+      <!-- SUB-TAB: Main Performance System -->
+      <div id="itab-fitMain" class="inner-tab-content active">
+
+        <!-- Horizontal Date Scroller -->
+        <div class="fit-date-scroll" id="fitDateScroll"></div>
+
+        <!-- Daily Summary Card -->
+        <div class="fit-summary-card" id="fitSummaryCard">
+          <div class="fit-summary-card-header">
+            <span class="fit-summary-title">Today&rsquo;s Fitness Summary</span>
+            <button class="btn-icon-sm" onclick="openProfileEdit()" title="Edit fitness profile">&#x270F;</button>
+          </div>
+          <div class="fit-summary-body">
+            <!-- SVG Progress Ring -->
+            <div class="fit-ring-wrap">
+              <svg class="fit-ring-svg" viewBox="0 0 120 120">
+                <circle class="fit-ring-bg" cx="60" cy="60" r="48"/>
+                <circle id="fitRingFill" class="fit-ring-fill" cx="60" cy="60" r="48"
+                        stroke-dasharray="301.6" stroke-dashoffset="301.6"/>
+              </svg>
+              <div class="fit-ring-center">
+                <span id="fitRingPct" class="fit-ring-pct">0%</span>
+                <span class="fit-ring-pct-label">of goal</span>
+              </div>
+            </div>
+            <!-- Numeric Stats -->
+            <div class="fit-summary-nums">
+              <div class="fit-sum-item">
+                <span id="fitSumConsumed" class="fit-sum-val consumed">0</span>
+                <span class="fit-sum-label">Consumed<br/><small>kcal</small></span>
+              </div>
+              <div class="fit-sum-item">
+                <span id="fitSumGoal" class="fit-sum-val goal">2000</span>
+                <span class="fit-sum-label">Goal<br/><small>kcal</small></span>
+              </div>
+              <div class="fit-sum-item">
+                <span id="fitSumRemaining" class="fit-sum-val remaining">2000</span>
+                <span class="fit-sum-label">Remaining<br/><small>kcal</small></span>
+              </div>
+            </div>
+          </div>
+          <!-- Quick Log Row (hidden by default) -->
+          <div class="fit-quick-log" id="fitQuickLogRow" style="display:none">
+            <select id="fitQuickMeal">
+              <option value="BREAKFAST">&#x1F373; Breakfast</option>
+              <option value="LUNCH">&#x1F35C; Lunch</option>
+              <option value="DINNER">&#x1F35D; Dinner</option>
+              <option value="SNACK">&#x1F36A; Snack</option>
+              <option value="WORKOUT">&#x1F4AA; Workout</option>
+            </select>
+            <input type="number" id="fitQuickConsumed" placeholder="Consumed kcal" min="0"/>
+            <input type="number" id="fitQuickBurned" placeholder="Burned kcal" min="0"/>
+            <button class="btn-primary btn-sm" onclick="quickLogCalories()">Log</button>
+            <button class="btn-secondary btn-sm" onclick="toggleQuickLog()">&#x2715;</button>
+          </div>
+          <button class="btn-secondary btn-sm fit-log-btn" onclick="toggleQuickLog()">+ Log Calories</button>
+        </div>
+
+        <!-- Calorie Calculator Card -->
+        <div class="fit-calc-card" id="fitCalcCard">
+          <div class="fit-calc-header" onclick="toggleCalcForm()">
+            <span class="fit-calc-title">&#x1F9EE; Calorie Calculator</span>
+            <span id="fitCalcChevron" class="fit-chevron">&#x25BC;</span>
+          </div>
+          <div id="fitCalcBody" style="display:none">
+            <form id="fitCalcForm" onsubmit="calculateAndSave(event)">
+              <div class="form-row">
+                <div class="form-group"><label>Age</label><input type="number" id="calcAge" min="10" max="100" placeholder="25"/></div>
+                <div class="form-group"><label>Weight (kg)</label><input type="number" id="calcWeight" min="30" max="300" step="0.1" placeholder="70"/></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Height (cm)</label><input type="number" id="calcHeight" min="100" max="250" placeholder="170"/></div>
+                <div class="form-group"><label>Gender</label>
+                  <select id="calcGender">
+                    <option value="M">Male</option>
+                    <option value="F">Female</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group"><label>Activity Level</label>
+                <select id="calcActivity">
+                  <option value="SEDENTARY">Sedentary (desk job)</option>
+                  <option value="LIGHT">Light (1-3 days/week)</option>
+                  <option value="MODERATE" selected>Moderate (3-5 days/week)</option>
+                  <option value="ACTIVE">Active (6-7 days/week)</option>
+                  <option value="VERY_ACTIVE">Very Active (athlete)</option>
+                </select>
+              </div>
+              <div id="fitCalcResult" class="fit-calc-result" style="display:none">
+                Daily Requirement: <strong id="fitCalcResultVal"></strong> kcal
+              </div>
+              <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="toggleCalcForm()">Cancel</button>
+                <button type="submit" class="btn-primary">Calculate &amp; Save Goal</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Active Workouts -->
+        <div class="fit-workouts-section">
+          <div class="fit-section-hd">
+            <span class="fit-section-title">Active Workouts</span>
+            <span id="activeWorkoutsCount" class="fit-count-badge">0</span>
+            <button id="fitAddWorkoutFab" class="fit-add-workout-fab" onclick="createNewWorkout()">+ Add Workout</button>
+          </div>
+          <div id="activeWorkoutsList" class="fit-workout-list">
+            <div class="loading">Loading workouts&hellip;</div>
+          </div>
+        </div>
+
+        <!-- Schedule Weekly Exercise -->
+        <div class="sched-section">
+          <!-- Mode selector -->
+          <div class="sched-mode-bar">
+            <button class="sched-mode-btn active" data-mode="custom" onclick="setSchedMode('custom')">&#x1F4DD; Custom Schedule</button>
+            <button class="sched-mode-btn" data-mode="ai" onclick="setSchedMode('ai')">&#x1F916; AI Plan</button>
+          </div>
+
+          <!-- Week navigation bar -->
+          <div class="sched-week-nav">
+            <button class="sched-nav-btn" onclick="schedWeekPrev()">&#x2039;</button>
+            <span id="schedWeekLabel" class="sched-week-label">Loading…</span>
+            <button class="sched-nav-btn" onclick="schedWeekNext()">&#x203A;</button>
+            <button class="sched-monthly-btn" onclick="toggleSchedMonthly()" title="Monthly view">&#x1F4C5;</button>
+          </div>
+
+          <!-- Monthly overview panel (hidden by default) -->
+          <div id="schedMonthPanel" class="sched-month-panel" style="display:none">
+            <div class="sched-month-nav">
+              <button class="sched-nav-btn" onclick="schedMonthPrev()">&#x2039;</button>
+              <span id="schedMonthLabel" class="sched-month-label"></span>
+              <button class="sched-nav-btn" onclick="schedMonthNext()">&#x203A;</button>
+            </div>
+            <div id="schedMonthGrid" class="sched-month-grid"></div>
+          </div>
+
+          <!-- AI Plan panel (visible in ai mode) -->
+          <div id="schedAiPanel" class="sched-ai-panel" style="display:none">
+            <p class="sched-ai-hint">Describe your fitness goals and AI will build a full weekly plan for you.</p>
+            <div class="sched-ai-row">
+              <input id="schedAiInput" class="sched-ai-input" type="text"
+                     placeholder="e.g. 3-day push-pull-legs, 45 min each…" />
+              <button class="sched-ai-btn" onclick="schedAiAdd()">&#x2728; Generate Plan</button>
+            </div>
+          </div>
+
+          <!-- Custom Schedule panel: 7-day week grid (visible in custom mode) -->
+          <div id="schedCustomPanel">
+            <div id="schedWeekGrid" class="sched-week-grid">
+              <!-- rendered by JS -->
+            </div>
+          </div>
+
+          <!-- Push to active workouts (always shown) -->
+          <div class="sched-push-row">
+            <button class="sched-push-btn" onclick="pushWeekToActive()">
+              &#x25B6; Push Week to Active Workouts
+            </button>
+          </div>
+        </div>
+
+
+      </div>
+
+      <!-- SUB-TAB: Mini Calendar (Fitness) -->
+      <div id="itab-fitCalendar" class="inner-tab-content" style="display:none">
+        <div class="cal-widget-header">
+          <button class="cal-nav-btn" onclick="fitCalPrev()">&#x2039;</button>
+          <span id="fitCalMonthLabel" class="cal-month-label"></span>
+          <button class="cal-nav-btn" onclick="fitCalNext()">&#x203A;</button>
+        </div>
+        <div class="cal-grid-wrap">
+          <div class="cal-day-headers">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div id="fitCalGrid" class="cal-grid"></div>
+        </div>
+        <p class="cal-hint">&#9432; Click a day to see tasks completed on that date.</p>
+      </div>
+
+      <!-- SUB-TAB: Fitness Categories -->
+      <div id="itab-fitCategories" class="inner-tab-content" style="display:none">
+        <div class="page-header" style="margin-bottom:0.75rem">
+          <h3 style="margin:0;font-size:1rem">Fitness Categories</h3>
+          <button class="btn-primary btn-sm" onclick="promptAddFitnessCategory()">+ Add Category</button>
+        </div>
+        <div id="fitCategoryList" class="cat-list">
+          <div class="loading">Loading categories&hellip;</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FILES TAB
+    <section id="tab-files" class="tab-content">
+      <div class="page-header"><h2>Files &amp; Uploads</h2></div>
+      <div class="upload-zone" id="uploadZone">
+        <p>&#x1F4C2; Drag &amp; drop or click to select a file</p>
+        <input type="file" id="fileInput" hidden/>
+      </div>
+      <div id="fileList" class="file-list-wrap">
+        <div class="loading">Loading files&hellip;</div>
+      </div>
+    </section> -->
+
+    <!-- COLLAB TAB -->
+    <section id="tab-collab" class="tab-content">
+      <div class="page-header">
+        <h2>&#x1F465; Collaboration</h2>
+      </div>
+      <!-- Collab inner sub-tabs -->
+      <div class="inner-tab-bar">
+        <button class="inner-tab active" data-itab="collabTasks">Tasks</button>
+        <button class="inner-tab" data-itab="collabGoals">Goals</button>
+        <!-- <button class="inner-tab" data-itab="collabFiles">Files</button> -->
+        <button class="inner-tab" data-itab="collabWorkouts">&#x1F3CB; Fitness </button>
+      </div>
+      <div id="itab-collabTasks" class="inner-tab-content active">
+        <p class="cal-hint" style="margin-bottom:0.75rem">Tasks shared with you or where you are a collaborator.</p>
+        <div id="collabTaskList" class="task-sections-wrap"><div class="loading">Loading&hellip;</div></div>
+      </div>
+      <div id="itab-collabGoals" class="inner-tab-content" style="display:none">
+        <p class="cal-hint" style="margin-bottom:0.75rem">Goals you are collaborating on.</p>
+        <div id="collabGoalList" class="card-grid"><div class="loading">Loading&hellip;</div></div>
+      </div>
+      <div id="itab-collabFiles" class="inner-tab-content" style="display:none">
+        <p class="cal-hint" style="margin-bottom:0.75rem">Files shared with you.</p>
+        <div id="collabFileList" class="file-list-wrap"><div class="loading">Loading&hellip;</div></div>
+      </div>
+
+      <div id="itab-collabWorkouts" class="inner-tab-content" style="display:none">
+        <p class="cal-hint" style="margin-bottom:0.75rem">Workouts shared with you by other users.</p>
+        <div id="collabWorkoutList" class="fit-workout-list"><div class="loading">Loading&hellip;</div></div>
+      </div>
+    </section>
+
+    <!-- DAILY NOTES TAB -->
+    <section id="tab-notes" class="tab-content">
+      <div class="page-header"><h2>&#x1F4D3; Daily Notes</h2></div>
+
+      <!-- Date navigator -->
+      <div class="note-date-nav">
+        <button class="note-nav-btn" onclick="noteDatePrev()">&#x2039;</button>
+        <span id="noteCurrentDate" class="note-date-label">Today</span>
+        <button class="note-nav-btn" onclick="noteDateNext()">&#x203A;</button>
+        <button class="note-today-btn" onclick="noteTodayJump()" title="Jump to today">Today</button>
+      </div>
+
+      <!-- Note editor -->
+      <div class="note-editor-wrap">
+        <textarea id="noteContent" class="note-editor"
+          placeholder="Write your thoughts, reflections, or anything you want to remember about today…"
+          oninput="onNoteInput()"></textarea>
+
+        <!-- Phase 7: Energy & Sleep -->
+        <div class="note-meta-row">
+          <label class="note-meta-lbl">Energy
+            <select id="noteEnergy" onchange="onNoteInput()">
+              <option value="">—</option>
+              <option value="1">1 - Exhausted</option>
+              <option value="2">2</option>
+              <option value="3">3 - Low</option>
+              <option value="4">4</option>
+              <option value="5">5 - Neutral</option>
+              <option value="6">6</option>
+              <option value="7">7 - Good</option>
+              <option value="8">8</option>
+              <option value="9">9 - Great</option>
+              <option value="10">10 - Peak</option>
+            </select>
+          </label>
+          <label class="note-meta-lbl">Sleep (hrs)
+            <input type="number" id="noteSleep" min="0" max="24" step="0.5"
+                   placeholder="e.g. 7.5" onchange="onNoteInput()" style="width:90px"/>
+          </label>
+          <label class="note-meta-lbl">Mood
+            <select id="noteMoodSelect" onchange="onNoteInput()">
+              <option value="">—</option>
+              <option value="HAPPY">😊 Happy</option>
+              <option value="GOOD">🙂 Good</option>
+              <option value="NEUTRAL">😐 Neutral</option>
+              <option value="TIRED">😴 Tired</option>
+              <option value="STRESSED">😤 Stressed</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="note-editor-footer">
+          <span id="noteSaveIndicator" class="note-save-indicator" style="opacity:0">&#x2713; Saved</span>
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <button class="btn-icon" onclick="deleteNote()" title="Delete note">&#x1F5D1;</button>
+            <button class="btn-primary btn-sm" onclick="saveNote()">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search section -->
+      <div class="note-search-section">
+        <div class="note-search-hd">&#x1F50D; Search Notes</div>
+        <div class="note-search-bar">
+          <input type="text" id="noteSearchInput" placeholder="Search by keyword…" class="note-search-input"/>
+          <input type="date" id="noteSearchStart" class="note-search-date" title="From date"/>
+          <input type="date" id="noteSearchEnd" class="note-search-date" title="To date"/>
+          <button class="btn-primary btn-sm" onclick="searchNotes()">Search</button>
+        </div>
+        <div id="noteSearchResults" class="note-search-results"></div>
+      </div>
+    </section>
+
+    <!-- PEOPLE TAB -->
+    <section id="tab-people" class="tab-content">
+      <div class="page-header"><h2>People &amp; Chat</h2></div>
+      <div class="people-search-bar">
+        <input type="text" id="userSearchInput" placeholder="Search by name or email&hellip;" autocomplete="off"/>
+        <button class="btn-primary btn-sm" onclick="searchUsers()">Search</button>
+      </div>
+      <div id="userSearchResults" class="user-search-results hidden"></div>
+      <div class="section-label" style="margin:1rem 0 0.5rem;font-weight:600;color:var(--text-secondary)">Conversations</div>
+      <div id="conversationsList" class="conversations-list">
+        <div class="loading">Loading&hellip;</div>
+      </div>
+      <!-- Chat Thread (hidden until opened) -->
+      <div id="chatThread" class="chat-thread hidden">
+        <div class="chat-thread-header">
+          <button class="btn-icon back-btn" onclick="closeThread()">&#x2190; Back</button>
+          <span id="chatThreadTitle" class="chat-thread-name"></span>
+        </div>
+        <div id="threadMessages" class="chat-window"></div>
+        <div class="chat-input-bar">
+          <textarea id="threadInput" placeholder="Type a message&hellip;" rows="2"></textarea>
+          <button class="btn-primary" onclick="sendThreadMessage()">Send</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- AI CHAT OVERLAY -->
+  <div id="aiChatOverlay" class="ai-chat-overlay hidden">
+    <div class="ai-chat-sheet">
+      <div class="ai-chat-sheet-header">
+        <span>&#x1F916; AI Coach</span>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <button class="btn-secondary btn-sm" id="dailySummaryBtn">Summary</button>
+          <button class="btn-secondary btn-sm" id="clearChatBtn">Clear</button>
+          <button class="modal-close" id="closeAiChat">&#x2715;</button>
+        </div>
+      </div>
+      <div id="dailySummaryPanel" class="hidden ai-insight daily-summary-panel"></div>
+      <div id="chatWindow" class="chat-window"></div>
+      <div class="chat-input-bar">
+        <textarea id="chatInput" placeholder="Ask your AI coach&hellip;" rows="2"></textarea>
+        <button class="btn-primary" id="sendChatBtn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <button id="aiFab" class="ai-fab" title="Open AI Coach">🤖</button>
+
+  <!-- BOTTOM NAV — CSS icons, no emoji -->
+  <nav class="bottom-nav">
+    <a href="#" class="nav-item active" data-tab="tasks">
+      <span class="nav-icon nav-icon-tasks"></span>
+      <span class="nav-label">Tasks</span>
+    </a>
+    <a href="#" class="nav-item" data-tab="goals">
+      <span class="nav-icon nav-icon-goals"></span>
+      <span class="nav-label">Goals</span>
+    </a>
+    <a href="#" class="nav-item" data-tab="workouts">
+      <span class="nav-icon nav-icon-workouts"></span>
+      <span class="nav-label">Fitness</span>
+    </a>
+    <!-- <a href="#" class="nav-item" data-tab="files">
+      <span class="nav-icon nav-icon-files"></span>
+      <span class="nav-label">Files</span>
+    </a> -->
+    <a href="#" class="nav-item" data-tab="notes">
+      <span class="nav-icon nav-icon-notes"></span>
+      <span class="nav-label">Notes</span>
+    </a>
+    <a href="#" class="nav-item" data-tab="collab">
+      <span class="nav-icon nav-icon-collab"></span>
+      <span class="nav-label">Collab</span>
+    </a>
+    <a href="#" class="nav-item" data-tab="people">
+      <span class="nav-icon nav-icon-people"></span>
+      <span class="nav-label">People</span>
+      <span id="peopleBadge" class="nav-badge hidden">0</span>
+    </a>
+  </nav>
+
+  <!-- TASK MODAL -->
+  <div id="taskModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="taskModalTitle">New Task</h3>
+        <button class="modal-close" data-modal="taskModal">&#x2715;</button>
+      </div>
+      <form id="taskForm">
+        <input type="hidden" id="taskEditId" value=""/>
+        <div class="form-group"><label>Title *</label><input type="text" id="taskTitle" required/></div>
+        <div class="form-group"><label>Description</label><textarea id="taskDesc" rows="3"></textarea></div>
+        <div class="form-row">
+          <div class="form-group"><label>Priority</label>
+            <select id="taskPriority">
+              <option value="LOW">Low</option>
+              <option value="MEDIUM" selected>Medium</option>
+              <option value="HIGH">High</option>
+              <option value="URGENT">Urgent</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Due Date</label><input type="datetime-local" id="taskDue"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Category</label><input type="text" id="taskCategory" placeholder="Work, Personal&hellip;"/></div>
+          <div class="form-group"><label>Section</label><input type="text" id="taskSection" placeholder="Morning Routine, Sprint 1&hellip;"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Scheduled Date</label><input type="date" id="taskScheduledDate"/></div>
+          <div class="form-group"><label>Fitness Category</label>
+            <select id="taskFitnessCategoryId">
+              <option value="">&#x2014; None &#x2014;</option>
+            </select>
+            <button type="button" class="btn-secondary btn-sm" id="addCategoryBtn" style="margin-top:0.35rem;font-size:0.78rem">+ Custom Category</button>
+          </div>
+        </div>
+        <div class="form-row" id="caloriesRow" style="display:none">
+          <div class="form-group"><label>Calories Consumed</label><input type="number" id="taskCaloriesConsumed" min="0" placeholder="0"/></div>
+          <div class="form-group"><label>Calories Burned</label><input type="number" id="taskCaloriesBurned" min="0" placeholder="0"/></div>
+        </div>
+        <div class="form-group"><label>Parent Task <span style="font-weight:400;color:var(--text-secondary)">(optional — for nested exercises)</span></label>
+          <select id="taskParentId"><option value="">&#x2014; Top-level task &#x2014;</option></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Duration (minutes)</label>
+            <input type="number" id="taskDuration" min="1" placeholder="e.g. 30"/>
+          </div>
+          <div class="form-group" style="flex-direction:row;align-items:center;gap:0.5rem;padding-top:1.6rem">
+            <input type="checkbox" id="taskAutoComplete" style="width:auto;margin:0"/>
+            <label for="taskAutoComplete" style="margin:0;font-weight:400">Auto-complete when time elapses</label>
+          </div>
+        </div>
+        <input type="hidden" id="taskCollabEditable" value="false"/>
+        <!-- Repeat Daily -->
+        <div class="form-row" style="align-items:flex-end">
+          <div class="form-group" style="flex-direction:row;align-items:center;gap:0.5rem;padding-top:1.6rem">
+            <input type="checkbox" id="taskRecurring" style="width:auto;margin:0" onchange="toggleRecurringTime()"/>
+            <label for="taskRecurring" style="margin:0;font-weight:400">&#x1F501; Repeat Daily</label>
+          </div>
+          <div class="form-group" id="recurringTimeGroup" style="display:none">
+            <label>Reminder Time</label>
+            <input type="time" id="taskRecurringTime" value="08:00"/>
+          </div>
+        </div>
+        <!-- One-time Alarm -->
+        <div class="form-row" style="align-items:flex-end">
+          <div class="form-group">
+            <label>&#x23F0; Alarm Date &amp; Time <span style="font-weight:400;color:var(--text-secondary)">(one-time &mdash; sends email &amp; notification)</span></label>
+            <input type="datetime-local" id="taskAlarmTime"/>
+          </div>
+          <div class="form-group" style="justify-content:flex-end;padding-top:1.6rem">
+            <button type="button" class="btn-secondary btn-sm" onclick="document.getElementById('taskAlarmTime').value=''">Clear Alarm</button>
+          </div>
+        </div>
+        <div class="form-group"><label>Link to Goal</label>
+          <select id="taskGoalId"><option value="">&#x2014; No goal &#x2014;</option></select>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" data-modal="taskModal">Cancel</button>
+          <button type="submit" class="btn-primary" id="taskSubmitBtn">Create Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- COLLABORATOR PROGRESS MODAL -->
+  <div id="collabProgressModal" class="modal hidden">
+    <div class="modal-content" style="max-width:380px">
+      <div class="modal-header">
+        <h3>&#x1F4CA; My Progress</h3>
+        <button class="modal-close" data-modal="collabProgressModal">&#x2715;</button>
+      </div>
+      <input type="hidden" id="progressTaskId"/>
+      <div class="form-group">
+        <label>Completion % <span style="color:var(--text-muted);font-weight:400">(0&ndash;100)</span></label>
+        <input type="number" id="progressPct" min="0" max="100" value="0" style="max-width:120px"/>
+      </div>
+      <div class="form-group">
+        <label>Note <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+        <textarea id="progressNote" rows="3" placeholder="What did you accomplish? Any blockers?"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" data-modal="collabProgressModal">Cancel</button>
+        <button class="btn-primary" onclick="submitCollabProgress()">Save Progress</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GOAL MODAL -->
+  <div id="goalModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="goalModalTitle">New Goal</h3>
+        <button class="modal-close" data-modal="goalModal">&#x2715;</button>
+      </div>
+      <form id="goalForm">
+        <input type="hidden" id="goalEditId" value=""/>
+        <div class="form-group"><label>Title *</label><input type="text" id="goalTitle" required/></div>
+        <div class="form-group"><label>Description</label><textarea id="goalDesc" rows="3"></textarea></div>
+        <div class="form-row">
+          <div class="form-group"><label>Category</label>
+            <select id="goalCategory">
+              <option value="CAREER">Career</option>
+              <option value="FINANCE">Finance</option>
+              <option value="FITNESS">Fitness</option>
+              <option value="EDUCATION">Education</option>
+              <option value="PERSONAL">Personal</option>
+              <option value="BUSINESS">Business</option>
+              <option value="HEALTH">Health</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Target Date</label><input type="date" id="goalTarget"/></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" data-modal="goalModal">Cancel</button>
+          <button type="submit" class="btn-primary" id="goalSubmitBtn">Create Goal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- FITNESS PROFILE MODAL -->
+  <div id="fitProfileModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>&#x1F4AA; Fitness Profile</h3>
+        <button class="modal-close" onclick="document.getElementById('fitProfileModal').classList.add('hidden')">&#x2715;</button>
+      </div>
+      <form id="fitProfileForm" onsubmit="saveFitnessProfile(event)">
+        <div class="form-row">
+          <div class="form-group"><label>Age</label><input type="number" id="profAge" min="10" max="100" placeholder="25"/></div>
+          <div class="form-group"><label>Weight (kg)</label><input type="number" id="profWeight" step="0.1" placeholder="70"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Height (cm)</label><input type="number" id="profHeight" placeholder="170"/></div>
+          <div class="form-group"><label>Gender</label>
+            <select id="profGender">
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>Activity Level</label>
+          <select id="profActivity">
+            <option value="SEDENTARY">Sedentary</option>
+            <option value="LIGHT">Light (1-3 days)</option>
+            <option value="MODERATE" selected>Moderate (3-5 days)</option>
+            <option value="ACTIVE">Active (6-7 days)</option>
+            <option value="VERY_ACTIVE">Very Active</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Daily Calorie Goal (kcal)</label>
+          <input type="number" id="profGoal" min="800" max="8000" placeholder="Auto-calculate from data above"/>
+          <small style="color:var(--text-muted);font-size:0.75rem">Leave blank to auto-compute via Mifflin-St Jeor</small>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="document.getElementById('fitProfileModal').classList.add('hidden')">Cancel</button>
+          <button type="submit" class="btn-primary">Save Profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- ===== UNIVERSAL CALENDAR OVERLAY ===== -->
+  <div id="calendarOverlay" class="cal-overlay hidden">
+    <div class="cal-overlay-sheet">
+      <div class="cal-overlay-header">
+        <span>&#x1F4C5; Calendar</span>
+        <button class="modal-close" onclick="closeCalendarOverlay()">&#x2715;</button>
+      </div>
+      <div class="cal-widget-header">
+        <button class="cal-nav-btn" onclick="uniCalPrev()">&#x2039;</button>
+        <span id="uniCalMonthLabel" class="cal-month-label"></span>
+        <button class="cal-nav-btn" onclick="uniCalNext()">&#x203A;</button>
+      </div>
+      <div class="cal-grid-wrap">
+        <div class="cal-day-headers">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+        <div id="uniCalGrid" class="cal-grid"></div>
+      </div>
+      <p class="cal-hint">&#9432; Highlighted days have scheduled or completed tasks. Click to view.</p>
+    </div>
+  </div>
+
+  <!-- ===== CALENDAR DAY DETAIL POPUP ===== -->
+  <div id="calDayPopup" class="cal-day-popup hidden">
+    <div class="cal-day-popup-card">
+      <div class="cal-day-popup-header">
+        <span id="calDayPopupTitle"></span>
+        <button class="modal-close" onclick="closeDayPopup()">&#x2715;</button>
+      </div>
+      <div id="calDayPopupBody" class="cal-day-popup-body">
+        <div class="loading">Loading&hellip;</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FOCUS MODE MODAL ===== -->
+  <div id="focusModal" class="modal hidden">
+    <div class="modal-content" style="max-width:380px">
+      <div class="modal-header">
+        <h3>&#x23F1; Focus Session</h3>
+        <button class="modal-close" onclick="closeFocusModal()">&#x2715;</button>
+      </div>
+      <div class="modal-body" id="focusModalBody">
+        <!-- Pre-session UI -->
+        <div id="focusPreStart">
+          <div class="form-group">
+            <label>Duration (minutes)</label>
+            <input type="number" id="focusDuration" value="25" min="1" max="180" class="form-control"/>
+          </div>
+          <div class="form-group">
+            <label>Link to Task (optional)</label>
+            <select id="focusTaskLink" class="form-control">
+              <option value="">— No linked task —</option>
+            </select>
+          </div>
+          <button class="btn-primary" style="width:100%;margin-top:0.75rem" onclick="startFocusSession()">
+            Start Focus Session
+          </button>
+        </div>
+        <!-- Timer UI (shown while running) -->
+        <div id="focusTimerUI" style="display:none;text-align:center">
+          <div id="focusTimerDisplay" style="font-size:3rem;font-weight:700;color:var(--accent);margin:1rem 0">25:00</div>
+          <p id="focusTimerLabel" style="color:var(--text-muted);font-size:0.85rem">Deep focus in progress…</p>
+          <button class="btn-secondary" style="margin-top:0.5rem" onclick="endFocusEarly()">Finish Early</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== WEEKLY REPORT MODAL ===== -->
+  <div id="weeklyReportModal" class="modal hidden">
+    <div class="modal-content" style="max-width:540px">
+      <div class="modal-header">
+        <h3>&#x1F4CA; Weekly Report</h3>
+        <button class="modal-close" onclick="closeWeeklyReport()">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <div id="weeklyReportBody">
+          <div class="loading">Generating report…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ACHIEVEMENTS TOAST BADGE ===== -->
+  <div id="achievementToast" class="achievement-toast hidden">
+    <span id="achievementToastIcon" style="font-size:1.5rem;margin-right:0.5rem">🏆</span>
+    <div>
+      <div style="font-weight:600;font-size:0.9rem">Achievement Unlocked!</div>
+      <div id="achievementToastName" style="font-size:0.8rem;color:var(--text-muted)"></div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
