@@ -71,12 +71,14 @@
       errorEl.classList.add('hidden');
 
       try {
-        const data = await apiPost('/api/auth/register', {
-          fullName: document.getElementById('fullName').value,
-          email: document.getElementById('email').value,
-          password: document.getElementById('password').value,
-          phoneNumber: (document.getElementById('phone') || {value: null}).value || null
-        });
+        const payload = {
+          fullName: document.getElementById('fullName').value.trim(),
+          email:    document.getElementById('email').value.trim(),
+          password: document.getElementById('password').value
+        };
+        const phoneEl = document.getElementById('phone');
+        if (phoneEl && phoneEl.value) payload.phoneNumber = phoneEl.value;
+        const data = await apiPost('/api/auth/register', payload);
         localStorage.setItem('token', data.token);
         localStorage.setItem('userId', data.userId);
         localStorage.setItem('fullName', data.fullName);
