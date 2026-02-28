@@ -1,27 +1,21 @@
 package com.yourapp.controller;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
-import java.util.Map;
-
 /**
  * Lightweight health check endpoint.
- * GET /api/health → 200 {"status":"UP","timestamp":"..."}
- * Used by load balancers, uptime monitors, and Kubernetes liveness probes.
+ * GET /health → 200 "OK" (plain text)
+ * Used by uptime monitors and load balancers.
+ * No database or service dependencies - always returns OK if app is running.
  */
 @RestController
-@RequestMapping("/api/health")
+@RequestMapping("/health")
 public class HealthController {
 
-    @GetMapping
-    public ResponseEntity<Map<String, Object>> health() {
-        return ResponseEntity.ok(Map.of(
-                "status", "UP",
-                "timestamp", LocalDateTime.now().toString()
-        ));
+    @GetMapping(produces = "text/plain")
+    public String health() {
+        return "OK";
     }
 }
