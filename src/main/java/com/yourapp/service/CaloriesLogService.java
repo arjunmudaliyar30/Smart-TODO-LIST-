@@ -10,7 +10,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +21,7 @@ public class CaloriesLogService {
     private final UserFitnessProfileRepository userFitnessProfileRepository;
     private final ApplicationEventPublisher    eventPublisher;
 
+    @SuppressWarnings("null")
     public CaloriesLog create(String userId, CaloriesLogRequest req) {
         CaloriesLog log = CaloriesLog.builder()
                 .userId(userId)

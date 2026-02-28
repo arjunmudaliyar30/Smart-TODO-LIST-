@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings({"null", "resource"})
 public class AiService {
 
     private final OpenAIConfig openAIConfig;

@@ -50,6 +50,7 @@ public class FileController {
     }
 
     @GetMapping("/{id}/download")
+    @SuppressWarnings("null")
     public ResponseEntity<Resource> downloadFile(
             @AuthenticationPrincipal User user,
             @PathVariable String id) throws MalformedURLException {
@@ -73,6 +74,7 @@ public class FileController {
      * so the browser can decide whether to display or prompt.
      */
     @GetMapping("/{id}/preview")
+    @SuppressWarnings("null")
     public ResponseEntity<Resource> previewFile(
             @AuthenticationPrincipal User user,
             @PathVariable String id) throws MalformedURLException {

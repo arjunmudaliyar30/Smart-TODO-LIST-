@@ -4,7 +4,6 @@ import com.yourapp.model.Notification;
 import com.yourapp.model.NotificationChannel;
 import com.yourapp.model.User;
 import com.yourapp.repository.NotificationRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -106,6 +105,7 @@ public class NotificationService {
         }
     }
 
+    @SuppressWarnings("null")
     private void saveInApp(User user, String message, String type, NotificationChannel channel) {
         try {
             Notification notification = Notification.builder()

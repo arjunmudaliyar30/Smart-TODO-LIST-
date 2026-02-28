@@ -62,6 +62,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 
     /** Skip logging for static assets to reduce noise. */
     @Override
+    @SuppressWarnings("null")
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
         return path.startsWith("/css/")

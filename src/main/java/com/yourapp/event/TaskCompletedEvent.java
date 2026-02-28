@@ -1,6 +1,5 @@
 package com.yourapp.event;
 
-import com.yourapp.model.Task;
 import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 

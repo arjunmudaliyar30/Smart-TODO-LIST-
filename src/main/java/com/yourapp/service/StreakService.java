@@ -18,6 +18,7 @@ import java.time.temporal.ChronoUnit;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("null")
 public class StreakService {
 
     private final UserStreakRepository userStreakRepository;

@@ -28,6 +28,7 @@ import java.util.List;
  */
 @Service
 @Slf4j
+@SuppressWarnings("null")
 public class WebPushService {
 
     private final PushSubscriptionRepository subscriptionRepository;

@@ -12,6 +12,7 @@ public class WebConfig implements WebMvcConfigurer {
     private String uploadDir;
 
     @Override
+    @SuppressWarnings("null")
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:" + uploadDir);

@@ -1,6 +1,5 @@
 package com.yourapp.scheduler;
 
-import com.yourapp.model.Task;
 import com.yourapp.model.User;
 import com.yourapp.model.Workout;
 import com.yourapp.repository.*;
@@ -12,7 +11,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 

@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/messages")
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("null")
 public class MessageController {
 
     private final MessageRepository messageRepository;

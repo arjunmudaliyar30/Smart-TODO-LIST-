@@ -19,6 +19,7 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("null")
 public class ReminderScheduler {
 
     private final TaskRepository taskRepository;

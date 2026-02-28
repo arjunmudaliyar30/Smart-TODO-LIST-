@@ -69,12 +69,12 @@ public class WorkoutScheduleService {
     // SAVE — upsert full week plan
     // -----------------------------------------------------------------------
 
+    @SuppressWarnings("null")
     public WorkoutSchedule saveSchedule(String userId, WorkoutScheduleRequest req) {
         LocalDate monday = toMonday(req.getWeekStartDate());
 
         // Ensure each day has a planId and correct date
         List<DayPlan> days = req.getDays() == null ? new ArrayList<>() : req.getDays();
-        String[] names = {"MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"};
         for (int i = 0; i < days.size(); i++) {
             DayPlan day = days.get(i);
             if (day.getDate() == null) day.setDate(monday.plusDays(i));
@@ -113,6 +113,7 @@ public class WorkoutScheduleService {
      * (if one with the same name + date doesn't already exist for the user).
      * Returns how many were created.
      */
+    @SuppressWarnings("null")
     public int pushToActiveWorkouts(String userId, LocalDate weekStartDate) {
         LocalDate monday = toMonday(weekStartDate);
         WorkoutSchedule sched = scheduleRepo.findByUserIdAndWeekStartDate(userId, monday)

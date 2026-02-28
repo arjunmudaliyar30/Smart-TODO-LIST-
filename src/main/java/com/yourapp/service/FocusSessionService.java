@@ -3,7 +3,6 @@ package com.yourapp.service;
 import com.yourapp.dto.FocusSessionDTO;
 import com.yourapp.event.FocusSessionCompletedEvent;
 import com.yourapp.model.FocusSession;
-import com.yourapp.model.Task;
 import com.yourapp.model.Task.TaskStatus;
 import com.yourapp.repository.FocusSessionRepository;
 import com.yourapp.repository.TaskRepository;
@@ -12,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,6 +22,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("null")
 public class FocusSessionService {
 
     private final FocusSessionRepository   focusSessionRepository;
@@ -47,6 +46,7 @@ public class FocusSessionService {
     }
 
     /** Manually complete a session before it expires. */
+    @SuppressWarnings("null")
     public FocusSession completeSession(String userId, String sessionId) {
         FocusSession session = focusSessionRepository.findById(sessionId)
                 .filter(s -> s.getUserId().equals(userId))
@@ -79,6 +79,7 @@ public class FocusSessionService {
         }
     }
 
+    @SuppressWarnings("null")
     private void onSessionCompleted(FocusSession session) {
         // Mark linked task done if present
         if (session.getLinkedTaskId() != null) {

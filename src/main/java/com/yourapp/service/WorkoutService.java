@@ -15,11 +15,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class WorkoutService {
 
     private final WorkoutRepository       workoutRepository;
@@ -28,6 +28,7 @@ public class WorkoutService {
 
     // ---- CRUD ----
 
+    @SuppressWarnings("null")
     public Workout createWorkout(String userId, WorkoutRequest request) {
         Workout workout = Workout.builder()
                 .userId(userId)

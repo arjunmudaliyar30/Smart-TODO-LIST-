@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class DailyNoteService {
 
     private final DailyNoteRepository      noteRepo;
@@ -81,6 +82,7 @@ public class DailyNoteService {
     // -----------------------------------------------------------------------
 
     @Transactional
+    @SuppressWarnings("null")
     public DailyNote autoSave(String userId, AutoSaveRequest req) {
         DailyNote note;
 
@@ -108,6 +110,7 @@ public class DailyNoteService {
     // GET SINGLE NOTE
     // -----------------------------------------------------------------------
 
+    @SuppressWarnings("null")
     public DailyNoteResponseDTO getNote(String noteId, String currentUserId) {
         DailyNote note = noteRepo.findById(noteId)
                 .filter(n -> !n.isDeleted())
@@ -176,8 +179,10 @@ public class DailyNoteService {
     // SHARE / REVOKE
     // -----------------------------------------------------------------------
 
+    @SuppressWarnings("null")
     public DailyNoteShare shareNote(String noteId, String ownerId, ShareNoteRequest req) {
-        DailyNote note = noteRepo.findById(noteId)
+        // Verify note exists and owner has access
+        noteRepo.findById(noteId)
                 .filter(n -> n.getUserId().equals(ownerId) && !n.isDeleted())
                 .orElseThrow(() -> new RuntimeException("Note not found or access denied"));
 
@@ -202,6 +207,7 @@ public class DailyNoteService {
         return shareRepo.save(share);
     }
 
+    @SuppressWarnings("null")
     public void revokeShare(String noteId, String ownerId, String targetUserId) {
         noteRepo.findById(noteId)
                 .filter(n -> n.getUserId().equals(ownerId))
@@ -214,6 +220,7 @@ public class DailyNoteService {
     // -----------------------------------------------------------------------
 
     @Transactional
+    @SuppressWarnings("null")
     public void softDelete(String noteId, String ownerId) {
         DailyNote note = noteRepo.findById(noteId)
                 .filter(n -> n.getUserId().equals(ownerId) && !n.isDeleted())

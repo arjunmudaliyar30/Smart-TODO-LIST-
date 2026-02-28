@@ -2,9 +2,7 @@ package com.yourapp.service;
 
 import com.yourapp.dto.PerformanceScoreDTO;
 import com.yourapp.dto.WeeklyReportDTO;
-import com.yourapp.model.Task;
 import com.yourapp.model.UserStreak;
-import com.yourapp.model.Workout;
 import com.yourapp.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +12,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Phase 3: Weekly Report Engine
@@ -26,10 +23,7 @@ import java.util.stream.Collectors;
 public class WeeklyAnalyticsService {
 
     private final PerformanceScoreService performanceScoreService;
-    private final TaskRepository          taskRepository;
-    private final WorkoutRepository       workoutRepository;
     private final CaloriesLogRepository   caloriesLogRepository;
-    private final DailyNoteRepository     dailyNoteRepository;
     private final UserStreakRepository    userStreakRepository;
 
     /**

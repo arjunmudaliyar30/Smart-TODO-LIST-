@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("null")
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -158,4 +159,4 @@ public class AuthService {
         userRepository.save(user);
         log.info("PASSWORD_RESET_SUCCESS email={}", user.getEmail());
     }
-}
+}

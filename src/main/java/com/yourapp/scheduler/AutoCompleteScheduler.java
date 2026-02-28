@@ -23,6 +23,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("null")
 public class AutoCompleteScheduler {
 
     private final TaskRepository     taskRepository;
