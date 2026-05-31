@@ -67,16 +67,25 @@ public class AiService {
         "RESPONSE FORMAT — you must ALWAYS respond with valid JSON only, no markdown, no extra text:\n\n" +
         "For normal replies:\n" +
         "{\"action\":\"REPLY\",\"message\":\"<your response>\"}\n\n" +
-        "When the user wants to schedule, add, create, or remind about a TASK (something time-bound or actionable with a deadline):\n" +
-        "{\"action\":\"CREATE_TASK\",\"title\":\"<task title>\",\"description\":\"<description or null>\",\"dueDate\":\"<ISO-8601 datetime e.g. 2026-02-26T09:00:00 or null>\",\"priority\":\"<HIGH|MEDIUM|LOW or null>\",\"category\":\"<category string or null>\",\"message\":\"<friendly confirmation>\"}\n\n" +
-        "When the user wants to add, set, or save a GOAL (a long-term ambition, dream, aspiration, or life objective — e.g. 'I want to be rich', 'become fit', 'start a business'):\n" +
-        "{\"action\":\"CREATE_GOAL\",\"title\":\"<goal title>\",\"description\":\"<brief description or null>\",\"category\":\"<CAREER|FINANCE|FITNESS|EDUCATION|PERSONAL|BUSINESS|HEALTH|RELATIONSHIP|OTHER>\",\"targetDate\":\"<ISO-8601 date e.g. 2026-12-31 or null>\",\"message\":\"<friendly confirmation>\"}\n\n" +
-        "When the user wants to log, record, or add a WORKOUT (gym, run, exercise, leg day, chest day, cardio, push day, pull day, etc.):\n" +
-        "{\"action\":\"CREATE_WORKOUT\",\"name\":\"<workout name>\",\"type\":\"<STRENGTH|CARDIO|FLEXIBILITY|HIIT|SPORT|OTHER>\",\"workoutDate\":\"<ISO-8601 date e.g. 2026-02-25 or null for today>\",\"durationMinutes\":<number or 0>,\"notes\":\"<notes or null>\",\"message\":\"<friendly confirmation>\"}\n\n" +
-        "When the user mentions FILES or asks to upload/attach/add a file: reply with action REPLY and tell them to go to the Files tab in the sidebar to upload files directly — files cannot be added through chat.\n\n" +
-        "CRITICAL DISTINCTION: Tasks = time-bound to-dos with deadlines. Goals = life ambitions and aspirations. Workouts = exercise/gym sessions. Files = must be uploaded via Files tab. NEVER mix these up. NEVER use CREATE_TASK for goals, workouts, or files.\n\n" +
+        "When the user wants to schedule, add, create, or remind about a SINGLE TASK:\n" +
+        "{\"action\":\"CREATE_TASK\",\"title\":\"<task title>\",\"description\":\"<description or null>\",\"dueDate\":\"<ISO-8601 datetime e.g. 2026-05-30T09:00:00 or null>\",\"priority\":\"<HIGH|MEDIUM|LOW or null>\",\"category\":\"<category string or null>\",\"message\":\"<friendly confirmation>\"}\n\n" +
+        "When the user mentions TWO OR MORE things to schedule, do, or create — even in the same sentence — ALWAYS use CREATE_TASKS:\n" +
+        "{\"action\":\"CREATE_TASKS\",\"tasks\":[{\"title\":\"<title>\",\"description\":\"<desc or null>\",\"dueDate\":\"<ISO datetime or null>\",\"priority\":\"<HIGH|MEDIUM|LOW or null>\",\"category\":\"<cat or null>\"},...],\"message\":\"<friendly confirmation listing all task titles>\"}\n\n" +
+        "When the user wants to add, set, or save a GOAL (a long-term ambition, dream, aspiration, or life objective):\n" +
+        "{\"action\":\"CREATE_GOAL\",\"title\":\"<goal title>\",\"description\":\"<brief description or null>\",\"category\":\"<CAREER|FINANCE|FITNESS|EDUCATION|PERSONAL|BUSINESS|HEALTH|RELATIONSHIP|OTHER>\",\"targetDate\":\"<ISO-8601 date or null>\",\"message\":\"<friendly confirmation>\"}\n\n" +
+        "When the user says they ALREADY DID, JUST COMPLETED, or FINISHED a workout/exercise (past tense log):\n" +
+        "{\"action\":\"CREATE_WORKOUT\",\"name\":\"<workout name>\",\"type\":\"<STRENGTH|CARDIO|FLEXIBILITY|HIIT|SPORT|OTHER>\",\"workoutDate\":\"<ISO-8601 date or null for today>\",\"durationMinutes\":<number or 0>,\"notes\":\"<notes or null>\",\"message\":\"<friendly confirmation>\"}\n\n" +
+        "CRITICAL DISTINCTIONS:\n" +
+        "- SCHEDULING FUTURE activity (meetings, runs, classes, exercise plans) → CREATE_TASK or CREATE_TASKS. NOT CREATE_WORKOUT.\n" +
+        "- LOGGING PAST activity ('I just ran 5km', 'I completed chest day', 'log my workout') → CREATE_WORKOUT.\n" +
+        "- Multiple items mentioned = ALWAYS CREATE_TASKS (not multiple separate responses).\n" +
+        "- Goals = life ambitions ('I want to be a millionaire', 'become fit by Dec') → CREATE_GOAL.\n" +
+        "- Files must be uploaded via Files tab → REPLY.\n\n" +
+        "DATE RESOLUTION — compute exact ISO dates from these relative expressions:\n" +
+        "Today=%s | Tomorrow=%s | Day-after-tomorrow=%s\n" +
+        "Time expressions: 'morning'=09:00, 'afternoon'=14:00, 'evening'=18:00, 'night'=20:00, 'noon'=12:00.\n" +
+        "Always output full ISO-8601 datetime when a time/date is mentioned (e.g. 2026-05-30T09:00:00).\n\n" +
         "USER CONTEXT (use this to give personalised advice):\n" +
-        "Today: %s\n" +
         "Pending tasks (%d): %s\n" +
         "Completed today (%d): %s\n" +
         "Active goals (%d): %s\n";
@@ -118,6 +127,7 @@ public class AiService {
 
         // Parse the JSON action response
         Task createdTask = null;
+        List<Task> createdTasks = null;
         Goal createdGoal = null;
         Workout createdWorkout = null;
         String displayMessage;
@@ -136,6 +146,16 @@ public class AiService {
             if ("CREATE_TASK".equals(action)) {
                 createdTask = createTaskFromAiAction(userId, node);
                 log.info("AI_TASK_CREATED userId={} title={}", userId, createdTask.getTitle());
+            } else if ("CREATE_TASKS".equals(action)) {
+                JsonNode tasksNode = node.path("tasks");
+                if (tasksNode.isArray() && !tasksNode.isEmpty()) {
+                    createdTasks = new ArrayList<>();
+                    for (JsonNode taskNode : tasksNode) {
+                        Task t = createTaskFromAiAction(userId, taskNode);
+                        createdTasks.add(t);
+                        log.info("AI_TASK_CREATED userId={} title={}", userId, t.getTitle());
+                    }
+                }
             } else if ("CREATE_GOAL".equals(action)) {
                 createdGoal = createGoalFromAiAction(userId, node);
                 log.info("AI_GOAL_CREATED userId={} title={}", userId, createdGoal.getTitle());
@@ -160,6 +180,7 @@ public class AiService {
         return AiChatResponse.builder()
                 .message(aiMsg)
                 .taskCreated(createdTask)
+                .tasksCreated(createdTasks)
                 .goalCreated(createdGoal)
                 .workoutCreated(createdWorkout)
                 .build();
@@ -228,6 +249,21 @@ public class AiService {
     }
 
     // -------------------------------------------------------------------------
+    // Quick AI tip (1-2 sentences)
+    // -------------------------------------------------------------------------
+
+    public String quickSuggest(String context) throws IOException {
+        if (context == null || context.isBlank()) return "";
+        String prompt = "Give exactly ONE practical tip (1-2 sentences) related to: " + context + "\nNo fluff, no JSON, plain text only.";
+        String raw = callLLM("You are a helpful productivity and wellness coach.", List.of(), prompt);
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(raw.trim());
+            if (node.has("message")) return node.path("message").asText().trim();
+        } catch (Exception ignored) { /* plain text */ }
+        return raw.trim();
+    }
+
+    // -------------------------------------------------------------------------
     // Task breakdown
     // -------------------------------------------------------------------------
 
@@ -292,11 +328,13 @@ public class AiService {
     // -------------------------------------------------------------------------
 
     private String buildSystemPrompt(String userId) {
-        String today = LocalDateTime.now()
-                .format(DateTimeFormatter.ofPattern("EEEE, MMMM d yyyy HH:mm"));
+        LocalDate todayDate = LocalDate.now();
+        String today    = todayDate.format(DateTimeFormatter.ofPattern("EEEE yyyy-MM-dd"));
+        String tomorrow = todayDate.plusDays(1).format(DateTimeFormatter.ofPattern("EEEE yyyy-MM-dd"));
+        String dayAfter = todayDate.plusDays(2).format(DateTimeFormatter.ofPattern("EEEE yyyy-MM-dd"));
 
         if (userId == null) {
-            return String.format(SYSTEM_PROMPT_TEMPLATE, today, 0, "none", 0, "none", 0, "none");
+            return String.format(SYSTEM_PROMPT_TEMPLATE, today, tomorrow, dayAfter, 0, "none", 0, "none", 0, "none");
         }
 
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
@@ -327,7 +365,7 @@ public class AiService {
                 goals.stream().map(Goal::getTitle).collect(Collectors.joining("; "));
 
         return String.format(SYSTEM_PROMPT_TEMPLATE,
-                today,
+                today, tomorrow, dayAfter,
                 pending.size(), pendingStr,
                 completedToday.size(), completedStr,
                 goals.size(), goalsStr);

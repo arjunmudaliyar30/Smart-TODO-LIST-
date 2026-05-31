@@ -5,6 +5,7 @@ import com.yourapp.dto.CaloriesLogRequest;
 import com.yourapp.model.CaloriesLog;
 import com.yourapp.model.User;
 import com.yourapp.service.CaloriesLogService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +26,7 @@ public class CaloriesLogController {
     @PostMapping
     public ResponseEntity<ApiResponse<CaloriesLog>> create(
             @AuthenticationPrincipal User user,
-            @RequestBody CaloriesLogRequest request) {
+            @Valid @RequestBody CaloriesLogRequest request) {
         CaloriesLog log = service.create(user.getId(), request);
         return ResponseEntity.ok(ApiResponse.success("Entry logged", log));
     }
@@ -52,7 +53,7 @@ public class CaloriesLogController {
     public ResponseEntity<ApiResponse<CaloriesLog>> update(
             @AuthenticationPrincipal User user,
             @PathVariable String id,
-            @RequestBody CaloriesLogRequest request) {
+            @Valid @RequestBody CaloriesLogRequest request) {
         CaloriesLog log = service.update(user.getId(), id, request);
         return ResponseEntity.ok(ApiResponse.success("Entry updated", log));
     }

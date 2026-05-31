@@ -12,10 +12,14 @@ public class DailyNoteResponseDTO {
 
     private String      id;
     private LocalDate   date;
+    private String      title;
     private String      content;
+    private String      color;
+    private boolean     pinned;
     private String      mood;
     private boolean     isOwner;
     private PermissionType permissionType;  // null when owner
+    private java.time.LocalDateTime updatedAt;
 
     // Dynamic contextual data (not stored in DB)
     private int    tasksCompletedToday;

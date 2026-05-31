@@ -9,6 +9,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * Returned by POST /api/ai/chat.
  * When the AI detects a schedule/create-task intent, taskCreated will be non-null
@@ -28,6 +30,11 @@ public class AiChatResponse {
      * Frontend should show a toast and refresh the task panel.
      */
     private Task taskCreated;
+
+    /**
+     * Non-null when the AI created multiple tasks from a single message.
+     */
+    private List<Task> tasksCreated;
 
     /**
      * Non-null when the AI understood a goal-creation intent and created a goal in MongoDB.

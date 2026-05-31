@@ -13,6 +13,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="SMART TODO"/>
   <link rel="stylesheet" href="css/dashboard.css"/>
+  <link rel="stylesheet" href="css/alarm-overlay.css"/>
+  <link rel="stylesheet" href="css/mood-logger.css"/>
+  <link rel="stylesheet" href="css/habit-tracker.css"/>
+  <link rel="stylesheet" href="css/morning-briefing.css"/>
+  <link rel="stylesheet" href="css/evening-reflection.css"/>
 </head>
 <body>
   <header class="app-header">
@@ -24,6 +29,7 @@
       <span id="userGreeting" class="user-greeting"></span>
       <button id="calendarFab" class="btn-icon-header" title="Open Calendar" onclick="openCalendarOverlay()">&#x1F4C5;</button>
       <button id="themeToggleBtn" class="btn-icon-header" title="Toggle Day/Night mode" onclick="toggleTheme()">&#x1F31E;</button>
+      <button id="settingsBtn" class="btn-icon-header" title="Settings" onclick="openSettings()">&#x2699;&#xFE0F;</button>
       <button id="installBtn" class="btn-install hidden">Install</button>
       <button id="logoutBtn" class="btn-logout">Logout</button>
     </div>
@@ -50,6 +56,42 @@
       <div id="dailyRoutinesSection" class="daily-bar-body daily-panel-slide" style="display:none">
         <div id="dailyRoutinesList"></div>
       </div>
+      <!-- ===== COMBINED DASHBOARD SUMMARY CARD ===== -->
+      <div id="dashboardSummaryCard" style="background:#1a1a2e; border-radius:14px; border:1px solid rgba(255,255,255,0.08); margin-bottom:10px; overflow:hidden;">
+        <!-- Compact bar — always visible, tap to expand -->
+        <div onclick="toggleDashCard()" style="display:flex; align-items:center; gap:8px; padding:10px 14px; cursor:pointer; min-height:52px; box-sizing:border-box;">
+          <span style="font-size:11px; color:#a0a0b0; white-space:nowrap; flex-shrink:0;">&#x26A1;</span>
+          <span id="scoreValueBar" style="font-size:20px; font-weight:800; min-width:32px; color:#10b981;">&#x2014;</span>
+          <span style="width:1px; height:16px; background:rgba(255,255,255,0.15); flex-shrink:0; margin:0 2px;"></span>
+          <span style="font-size:11px; color:#a0a0b0; white-space:nowrap; flex-shrink:0;">&#x1F3AF;</span>
+          <span id="oneThingTextBar" style="font-size:12px; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#e0e0ff;">Loading&#x2026;</span>
+          <span style="font-size:11px; color:#a0a0b0; white-space:nowrap; flex-shrink:0;">&#x1F50B;</span>
+          <span id="dashCardArrow" style="font-size:16px; color:#a0a0b0; transition:transform 0.25s; flex-shrink:0; line-height:1; margin-left:4px;">&#x203A;</span>
+        </div>
+        <!-- Expanded section (hidden by default) -->
+        <div id="dashExpandedSection" style="display:none; border-top:1px solid rgba(255,255,255,0.06);">
+          <!-- Accountability score section -->
+          <div id="accountabilityScoreCard" style="display:none; border-radius:0; border:none; border-bottom:1px solid rgba(255,255,255,0.05); overflow:hidden; cursor:pointer;" onclick="event.stopPropagation(); this.classList.toggle('score-expanded')">
+            <div style="display:flex; align-items:center; gap:10px; padding:12px 16px;">
+              <span style="font-size:13px; font-weight:600; color:#a0a0b0; white-space:nowrap;">&#x26a1; Score</span>
+              <span id="scoreValue" style="font-size:22px; font-weight:800; min-width:40px;">&#x2014;</span>
+              <span id="scoreComment" style="flex:1; font-size:12px; font-style:italic; color:#888; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+              <span class="score-expand-arrow" style="font-size:18px; color:#a0a0b0; transition:transform 0.25s; flex-shrink:0; line-height:1;">&#x203A;</span>
+            </div>
+            <div class="score-expanded-body">
+              <div style="padding:0 16px 14px; font-size:13px; color:#a0a0b0;">Complete tasks, habits, and reflections to increase your score.</div>
+            </div>
+          </div>
+          <!-- One Thing section -->
+          <div id="oneThingCard" style="display:none; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.05); align-items:center; gap:12px; flex-wrap:wrap;">
+            <span style="font-size:0.85rem; color:var(--text-secondary,#a0a0b0); white-space:nowrap;">&#x1F3AF; One Thing:</span>
+            <span id="oneThingText" style="flex:1; font-size:0.9rem; font-weight:600; color:var(--text,#fff);">Loading...</span>
+            <button id="btnCompleteOneThing" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;display:none;" onclick="event.stopPropagation();completeOneThing()">Done</button>
+          </div>
+          <!-- Energy & Habits section (mood logger + habit tracker injected here by JS) -->
+          <div id="energyHabitsInCard" style="border-top:1px solid rgba(255,255,255,0.05);"></div>
+        </div>
+      </div>
       <div class="page-header">
         <h2>My Tasks</h2>
         <button class="btn-primary" id="openTaskModal">+ New Task</button>
@@ -57,20 +99,18 @@
       <div class="filter-bar-wrap">
         <div class="task-search-bar">
           <span class="search-icon">&#x1F50D;</span>
-          <input type="search" id="taskSearchInput" placeholder="Search tasks…" autocomplete="off"/>
+          <input type="search" id="taskSearchInput" aria-label="Search tasks" placeholder="Search tasks…" autocomplete="off"/>
           <button id="clearTaskSearch" class="clear-search hidden" title="Clear">&#x2715;</button>
         </div>
-        <div class="filter-bar">
-          <select id="taskStatusFilter">
-            <option value="">All Status</option>
-            <option value="PENDING">Pending</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="DONE">Done</option>
-          </select>
-          <select id="taskSectionFilter">
-            <option value="">All Sections</option>
-            <option value="__DAILY__">📅 Daily Tasks</option>
-          </select>
+        <!-- Hidden selects kept for JS compatibility -->
+        <select id="taskStatusFilter" aria-label="Filter by status" style="display:none"><option value=""></option></select>
+        <select id="taskSectionFilter" aria-label="Filter by section" style="display:none"><option value=""></option></select>
+        <!-- Pill tab filter bar -->
+        <div class="task-tab-bar" id="taskTabBar">
+          <button class="task-tab" data-tab="today" onclick="setTaskTab('today')" aria-label="Filter: Today">📅 Today <span class="task-tab-badge" id="badge-today">0</span></button>
+          <button class="task-tab" data-tab="daily" onclick="setTaskTab('daily')" aria-label="Filter: Daily">🔔 Daily <span class="task-tab-badge" id="badge-daily">0</span></button>
+          <button class="task-tab active" data-tab="all" onclick="setTaskTab('all')" aria-label="Filter: All">📋 All <span class="task-tab-badge" id="badge-all">0</span></button>
+          <button class="task-tab" data-tab="collab" onclick="setTaskTab('collab')" aria-label="Filter: Collab">👥 Collab <span class="task-tab-badge" id="badge-collab">0</span></button>
         </div>
       </div>
       <!-- Daily Routines moved to streak widget area above -->
@@ -96,6 +136,20 @@
     <section id="tab-workouts" class="tab-content">
       <div class="page-header" style="margin-bottom:0.75rem">
         <h2>&#x1F3CB; Performance</h2>
+      </div>
+
+      <!-- FITNESS INNER TAB BAR -->
+      <div class="inner-tab-bar">
+        <button class="inner-tab active" data-itab="fitMain">&#x1F3CB; Main</button>
+        <div class="fit-more-wrap" id="fitMoreWrap">
+          <button class="inner-tab fit-more-btn" id="fitMoreBtn" onclick="document.getElementById('fitMoreWrap').classList.toggle('open')">More &#x25BE;</button>
+          <div class="fit-more-dropdown" id="fitMoreDropdown">
+            <button class="inner-tab fit-more-item" data-itab="fitCalendar" onclick="document.getElementById('fitMoreWrap').classList.remove('open')">&#x1F4C5; Calendar</button>
+            <button class="inner-tab fit-more-item" data-itab="fitCategories" onclick="document.getElementById('fitMoreWrap').classList.remove('open')">&#x1F4CB; Categories</button>
+            <button class="inner-tab fit-more-item" data-itab="sessionTracker" onclick="document.getElementById('fitMoreWrap').classList.remove('open')">&#x1F3A4; Sessions</button>
+            <button class="inner-tab fit-more-item" data-itab="photoGallery" onclick="document.getElementById('fitMoreWrap').classList.remove('open')">&#x1F4F8; Photos</button>
+          </div>
+        </div>
       </div>
 
       <!-- SUB-TAB: Main Performance System -->
@@ -141,15 +195,15 @@
           </div>
           <!-- Quick Log Row (hidden by default) -->
           <div class="fit-quick-log" id="fitQuickLogRow" style="display:none">
-            <select id="fitQuickMeal">
+            <select id="fitQuickMeal" aria-label="Meal type">
               <option value="BREAKFAST">&#x1F373; Breakfast</option>
               <option value="LUNCH">&#x1F35C; Lunch</option>
               <option value="DINNER">&#x1F35D; Dinner</option>
               <option value="SNACK">&#x1F36A; Snack</option>
               <option value="WORKOUT">&#x1F4AA; Workout</option>
             </select>
-            <input type="number" id="fitQuickConsumed" placeholder="Consumed kcal" min="0"/>
-            <input type="number" id="fitQuickBurned" placeholder="Burned kcal" min="0"/>
+            <input type="number" id="fitQuickConsumed" aria-label="Calories consumed" placeholder="Consumed kcal" min="0"/>
+            <input type="number" id="fitQuickBurned" aria-label="Calories burned" placeholder="Burned kcal" min="0"/>
             <button class="btn-primary btn-sm" onclick="quickLogCalories()">Log</button>
             <button class="btn-secondary btn-sm" onclick="toggleQuickLog()">&#x2715;</button>
           </div>
@@ -165,20 +219,20 @@
           <div id="fitCalcBody" style="display:none">
             <form id="fitCalcForm" onsubmit="calculateAndSave(event)">
               <div class="form-row">
-                <div class="form-group"><label>Age</label><input type="number" id="calcAge" min="10" max="100" placeholder="25"/></div>
-                <div class="form-group"><label>Weight (kg)</label><input type="number" id="calcWeight" min="30" max="300" step="0.1" placeholder="70"/></div>
+                <div class="form-group"><label>Age</label><input type="number" id="calcAge" aria-label="Age" min="10" max="100" placeholder="25"/></div>
+                <div class="form-group"><label>Weight (kg)</label><input type="number" id="calcWeight" aria-label="Weight in kilograms" min="30" max="300" step="0.1" placeholder="70"/></div>
               </div>
               <div class="form-row">
-                <div class="form-group"><label>Height (cm)</label><input type="number" id="calcHeight" min="100" max="250" placeholder="170"/></div>
+                <div class="form-group"><label>Height (cm)</label><input type="number" id="calcHeight" aria-label="Height in centimeters" min="100" max="250" placeholder="170"/></div>
                 <div class="form-group"><label>Gender</label>
-                  <select id="calcGender">
+                  <select id="calcGender" aria-label="Gender">
                     <option value="M">Male</option>
                     <option value="F">Female</option>
                   </select>
                 </div>
               </div>
               <div class="form-group"><label>Activity Level</label>
-                <select id="calcActivity">
+                <select id="calcActivity" aria-label="Activity level">
                   <option value="SEDENTARY">Sedentary (desk job)</option>
                   <option value="LIGHT">Light (1-3 days/week)</option>
                   <option value="MODERATE" selected>Moderate (3-5 days/week)</option>
@@ -239,7 +293,7 @@
           <div id="schedAiPanel" class="sched-ai-panel" style="display:none">
             <p class="sched-ai-hint">Describe your fitness goals and AI will build a full weekly plan for you.</p>
             <div class="sched-ai-row">
-              <input id="schedAiInput" class="sched-ai-input" type="text"
+              <input id="schedAiInput" class="sched-ai-input" type="text" aria-label="Describe your fitness goals for AI plan"
                      placeholder="e.g. 3-day push-pull-legs, 45 min each…" />
               <button class="sched-ai-btn" onclick="schedAiAdd()">&#x2728; Generate Plan</button>
             </div>
@@ -289,6 +343,66 @@
           <div class="loading">Loading categories&hellip;</div>
         </div>
       </div>
+
+      <!-- SUB-TAB: Session Tracker -->
+      <div id="itab-sessionTracker" class="inner-tab-content" style="display:none">
+        <div class="page-header" style="margin-bottom:0.75rem">
+          <h3 style="margin:0;font-size:1rem">&#x1F3A4; Session Tracker</h3>
+        </div>
+        <button class="btn-primary" style="width:100%;margin-bottom:1.25rem" onclick="document.getElementById('sessionSheetOverlay').classList.add('active');document.getElementById('sessionBottomSheet').classList.add('active');">+ Log Session</button>
+        <!-- Session list -->
+        <div id="sessionList"></div>
+      </div>
+      <!-- Session bottom sheet overlay -->
+      <div class="session-overlay" id="sessionSheetOverlay" onclick="document.getElementById('sessionSheetOverlay').classList.remove('active');document.getElementById('sessionBottomSheet').classList.remove('active');"></div>
+      <!-- Session bottom sheet -->
+      <div class="session-bottom-sheet" id="sessionBottomSheet">
+        <div class="session-sheet-handle"></div>
+        <div class="session-sheet-title">&#x1F3A4; Log a Session</div>
+        <!-- Voice input bar -->
+        <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:1rem">
+          <button id="sessionVoiceBtn" class="btn-secondary" style="white-space:nowrap" onclick="startSessionVoice()">
+            &#x1F3A4; Speak Session
+          </button>
+          <span id="sessionVoiceStatus" style="font-size:0.8rem;color:var(--text-muted);flex:1"></span>
+        </div>
+        <!-- Manual / auto-filled form -->
+        <form id="sessionForm" onsubmit="submitSession(event)" style="display:flex;flex-direction:column;gap:0.6rem">
+          <input id="sessionType" class="form-input" aria-label="Session type" placeholder="Session type (Gym, Run, Yoga…)" required/>
+          <input id="sessionDuration" class="form-input" type="number" min="1" aria-label="Session duration in minutes" placeholder="Duration (minutes)"/>
+          <input id="sessionCalories" class="form-input" type="number" min="0" aria-label="Calories burned" placeholder="Calories burned"/>
+          <input id="sessionMood" class="form-input" aria-label="Session mood" placeholder="Mood (Energized, Tired, Neutral…)"/>
+          <textarea id="sessionNotes" class="form-input" rows="2" aria-label="Session notes" placeholder="Notes (optional)"></textarea>
+          <input id="sessionDate" class="form-input" type="date" aria-label="Session date"/>
+          <button type="submit" class="btn-primary">Save Session</button>
+        </form>
+      </div>
+
+      <!-- SUB-TAB: Progress Photo Gallery -->
+      <div id="itab-photoGallery" class="inner-tab-content" style="display:none">
+        <div class="page-header" style="margin-bottom:0.75rem">
+          <h3 style="margin:0;font-size:1rem">&#x1F4F8; Progress Photos</h3>
+        </div>
+        <button class="btn-primary" style="width:100%;margin-bottom:1.25rem" onclick="document.getElementById('photoSheetOverlay').classList.add('active');document.getElementById('photoBottomSheet').classList.add('active');">+ Add Progress Photo</button>
+        <!-- Gallery grid -->
+        <div id="photoGalleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem">
+          <p class="loading" style="grid-column:1/-1;text-align:center;opacity:.6">No progress photos yet.<br/>Upload your first check-in photo.</p>
+        </div>
+      </div>
+      <!-- Photo upload overlay -->
+      <div class="session-overlay" id="photoSheetOverlay" onclick="document.getElementById('photoSheetOverlay').classList.remove('active');document.getElementById('photoBottomSheet').classList.remove('active');"></div>
+      <!-- Photo upload bottom sheet -->
+      <div class="session-bottom-sheet" id="photoBottomSheet">
+        <div class="session-sheet-handle"></div>
+        <div class="session-sheet-title">&#x1F4F8; Add Progress Photo</div>
+        <form id="photoUploadForm" onsubmit="uploadProgressPhoto(event)" style="display:flex;flex-direction:column;gap:0.6rem">
+          <label style="font-size:0.85rem;opacity:.7">Select photo (jpg/png/gif/webp)</label>
+          <input id="photoFile" type="file" accept="image/*" class="form-input" aria-label="Select progress photo" required/>
+          <input id="photoDate" type="date" class="form-input" aria-label="Photo date"/>
+          <textarea id="photoNotes" class="form-input" rows="2" aria-label="Photo notes" placeholder="Notes (weight, measurements, feeling&#x2026;)"></textarea>
+          <button type="submit" class="btn-primary" id="photoUploadBtn">&#x2B06; Upload Photo</button>
+        </form>
+      </div>
     </section>
 
     <!-- FILES TAB
@@ -336,103 +450,273 @@
 
     <!-- DAILY NOTES TAB -->
     <section id="tab-notes" class="tab-content">
-      <div class="page-header"><h2>&#x1F4D3; Daily Notes</h2></div>
-
-      <!-- Date navigator -->
-      <div class="note-date-nav">
-        <button class="note-nav-btn" onclick="noteDatePrev()">&#x2039;</button>
-        <span id="noteCurrentDate" class="note-date-label">Today</span>
-        <button class="note-nav-btn" onclick="noteDateNext()">&#x203A;</button>
-        <button class="note-today-btn" onclick="noteTodayJump()" title="Jump to today">Today</button>
+      <!-- Header -->
+      <div class="page-header" style="gap:0.5rem;flex-wrap:wrap">
+        <h2>&#x1F4CB; Notes</h2>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex:1;justify-content:flex-end">
+          <div class="note-searchbar-wrap">
+            <span class="note-search-icon">&#x1F50D;</span>
+            <input type="search" id="noteSearchInput" placeholder="Search notes&hellip;" class="note-search-inline" oninput="searchNotes()"/>
+          </div>
+          <button class="btn-primary btn-sm" onclick="openNewNote()">+ New Note</button>
+          <button class="btn-ghost btn-xs" onclick="document.getElementById('reflSheetOverlay').classList.add('active');document.getElementById('reflBottomSheet').classList.add('active');if(window._reflRendered===false&&window.EveningReflection){window.EveningReflection.render('eveningReflectionContainer');window._reflRendered=true;}">&#x1F319;</button>
+        </div>
       </div>
 
-      <!-- Note editor -->
-      <div class="note-editor-wrap">
-        <textarea id="noteContent" class="note-editor"
-          placeholder="Write your thoughts, reflections, or anything you want to remember about today…"
-          oninput="onNoteInput()"></textarea>
-
-        <!-- Phase 7: Energy & Sleep -->
-        <div class="note-meta-row">
-          <label class="note-meta-lbl">Energy
-            <select id="noteEnergy" onchange="onNoteInput()">
-              <option value="">—</option>
-              <option value="1">1 - Exhausted</option>
-              <option value="2">2</option>
-              <option value="3">3 - Low</option>
-              <option value="4">4</option>
-              <option value="5">5 - Neutral</option>
-              <option value="6">6</option>
-              <option value="7">7 - Good</option>
-              <option value="8">8</option>
-              <option value="9">9 - Great</option>
-              <option value="10">10 - Peak</option>
-            </select>
-          </label>
-          <label class="note-meta-lbl">Sleep (hrs)
-            <input type="number" id="noteSleep" min="0" max="24" step="0.5"
-                   placeholder="e.g. 7.5" onchange="onNoteInput()" style="width:90px"/>
-          </label>
-          <label class="note-meta-lbl">Mood
-            <select id="noteMoodSelect" onchange="onNoteInput()">
-              <option value="">—</option>
-              <option value="HAPPY">😊 Happy</option>
-              <option value="GOOD">🙂 Good</option>
-              <option value="NEUTRAL">😐 Neutral</option>
-              <option value="TIRED">😴 Tired</option>
-              <option value="STRESSED">😤 Stressed</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="note-editor-footer">
-          <span id="noteSaveIndicator" class="note-save-indicator" style="opacity:0">&#x2713; Saved</span>
-          <div style="display:flex;gap:0.5rem;align-items:center">
-            <button class="btn-icon" onclick="deleteNote()" title="Delete note">&#x1F5D1;</button>
-            <button class="btn-primary btn-sm" onclick="saveNote()">Save</button>
+      <!-- New Note Modal Popup -->
+      <div id="noteCreateModal" class="modal hidden" onclick="if(event.target===this)closeNewNote()">
+        <div class="modal-content" style="max-width:480px">
+          <div class="modal-header">
+            <h3>&#x1F4DD; New Note</h3>
+            <button class="modal-close" onclick="closeNewNote()">&#x2715;</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:1rem">
+            <div class="form-group" style="margin-bottom:0">
+              <input id="noteCreateTitle" type="text" placeholder="Title (optional)" maxlength="120"/>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <textarea id="noteCreateContent" placeholder="Take a note…" rows="5" style="resize:vertical;font-family:inherit"></textarea>
+            </div>
+            <div class="settings-section">
+              <div class="settings-section-title" style="margin-bottom:0.6rem">&#x1F3A8; Color</div>
+              <div class="note-color-strip">
+                <button class="note-color-btn" data-color="default"  style="background:#1e1e38" title="Default" onclick="setNoteColor('default')"></button>
+                <button class="note-color-btn" data-color="#6c63ff"  style="background:#6c63ff" title="Purple"  onclick="setNoteColor('#6c63ff')"></button>
+                <button class="note-color-btn" data-color="#4facfe"  style="background:#4facfe" title="Blue"    onclick="setNoteColor('#4facfe')"></button>
+                <button class="note-color-btn" data-color="#43e97b"  style="background:#43e97b" title="Green"   onclick="setNoteColor('#43e97b')"></button>
+                <button class="note-color-btn" data-color="#f59e0b"  style="background:#f59e0b" title="Yellow"  onclick="setNoteColor('#f59e0b')"></button>
+                <button class="note-color-btn" data-color="#ef4444"  style="background:#ef4444" title="Red"     onclick="setNoteColor('#ef4444')"></button>
+                <button class="note-color-btn" data-color="#f472b6"  style="background:#f472b6" title="Pink"    onclick="setNoteColor('#f472b6')"></button>
+                <button class="note-color-btn" data-color="#fb923c"  style="background:#fb923c" title="Orange"  onclick="setNoteColor('#fb923c')"></button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeNewNote()">Cancel</button>
+            <button class="btn-primary" onclick="saveNewNote()">Save Note</button>
           </div>
         </div>
       </div>
 
-      <!-- Search section -->
-      <div class="note-search-section">
-        <div class="note-search-hd">&#x1F50D; Search Notes</div>
-        <div class="note-search-bar">
-          <input type="text" id="noteSearchInput" placeholder="Search by keyword…" class="note-search-input"/>
-          <input type="date" id="noteSearchStart" class="note-search-date" title="From date"/>
-          <input type="date" id="noteSearchEnd" class="note-search-date" title="To date"/>
-          <button class="btn-primary btn-sm" onclick="searchNotes()">Search</button>
-        </div>
-        <div id="noteSearchResults" class="note-search-results"></div>
+      <!-- (kept for backward compat, always hidden) -->
+      <div id="noteCreateCard" class="hidden"></div>
+
+      <!-- Notes grid -->
+      <div class="notes-section-hd" id="notesSectionHd" style="display:none">&#x1F4DD; NOTES</div>
+      <div id="noteCardsGrid" class="note-cards-grid">
+        <div class="loading">Loading notes&hellip;</div>
       </div>
+
+      <!-- Hidden fields kept for backward-compat with JS that uses these IDs -->
+      <input type="hidden" id="noteContent"/>
+      <input type="hidden" id="noteEnergy"/>
+      <input type="hidden" id="noteSleep"/>
+      <select id="noteMoodSelect" style="display:none"><option value=""></option></select>
+      <span id="noteSaveIndicator" style="display:none"></span>
     </section>
+
+    <!-- NOTE VIEW MODAL -->
+    <div id="noteViewModal" class="modal hidden">
+      <div class="modal-content note-view-modal-content">
+        <div class="note-view-header">
+          <h3 id="noteViewTitle" class="note-view-title-text"></h3>
+          <button class="modal-close" onclick="closeNoteView()">&#x2715;</button>
+        </div>
+        <div id="noteViewContent" class="note-view-body"></div>
+        <div class="note-view-footer">
+          <span id="noteViewUpdated" class="note-view-ts"></span>
+          <div style="display:flex;gap:0.6rem">
+            <button class="btn-secondary btn-sm" onclick="editNoteFromView()">&#x270F; Edit</button>
+            <button class="btn-secondary btn-sm" id="notePinBtn" onclick="toggleNotePin()">&#x1F4CC; Pin</button>
+            <button class="btn-secondary btn-sm" style="color:#ef4444;border-color:#ef4444" onclick="deleteNoteFromView()">&#x1F5D1; Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- PEOPLE TAB -->
     <section id="tab-people" class="tab-content">
-      <div class="page-header"><h2>People &amp; Chat</h2></div>
-      <div class="people-search-bar">
-        <input type="text" id="userSearchInput" placeholder="Search by name or email&hellip;" autocomplete="off"/>
+      <div class="page-header" id="peoplePageHeader"><h2>People &amp; Chat</h2></div>
+      <div class="people-search-bar" id="peopleSearchBar">
+        <input type="text" id="userSearchInput" aria-label="Search users by name or email" placeholder="Search by name or email&hellip;" autocomplete="off"/>
         <button class="btn-primary btn-sm" onclick="searchUsers()">Search</button>
       </div>
       <div id="userSearchResults" class="user-search-results hidden"></div>
-      <div class="section-label" style="margin:1rem 0 0.5rem;font-weight:600;color:var(--text-secondary)">Conversations</div>
+      <div class="section-label" id="convSectionLabel" style="margin:1rem 0 0.5rem;font-weight:600;color:var(--text-secondary)">Conversations</div>
       <div id="conversationsList" class="conversations-list">
         <div class="loading">Loading&hellip;</div>
       </div>
       <!-- Chat Thread (hidden until opened) -->
       <div id="chatThread" class="chat-thread hidden">
         <div class="chat-thread-header">
-          <button class="btn-icon back-btn" onclick="closeThread()">&#x2190; Back</button>
-          <span id="chatThreadTitle" class="chat-thread-name"></span>
+          <button class="chat-back-btn" onclick="closeThread()" aria-label="Back to conversations">&#x2190;</button>
+          <div class="chat-peer-info">
+            <div class="chat-peer-avatar" id="chatPeerAvatar"></div>
+            <div class="chat-peer-meta">
+              <span id="chatThreadTitle" class="chat-thread-name"></span>
+              <span class="chat-peer-status">&#x25CF; Active</span>
+            </div>
+          </div>
         </div>
         <div id="threadMessages" class="chat-window"></div>
         <div class="chat-input-bar">
-          <textarea id="threadInput" placeholder="Type a message&hellip;" rows="2"></textarea>
-          <button class="btn-primary" onclick="sendThreadMessage()">Send</button>
+          <textarea id="threadInput" aria-label="Type a message" placeholder="Message&hellip;" rows="1"></textarea>
+          <button class="chat-send-btn" onclick="sendThreadMessage()" aria-label="Send message">&#x27A4;</button>
         </div>
       </div>
     </section>
+
+    <!-- BRAIN COACH TAB -->
+    <section id="tab-braincoach" class="tab-content">
+      <div class="page-header" style="margin-bottom:0.75rem">
+        <h2>&#x1F9E0; Brain Coach</h2>
+      </div>
+
+      <div class="inner-tab-bar">
+        <button class="inner-tab active" data-itab="brainChallenges">&#x1F3AF; Challenges</button>
+        <button class="inner-tab" data-itab="brainDecisions">&#x1F4D3; Decision Journal</button>
+      </div>
+
+      <!-- SUB-TAB: Daily Challenges -->
+      <div id="itab-brainChallenges" class="inner-tab-content active">
+        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem">
+          <select id="challengeCategory" class="form-input" aria-label="Challenge category" style="flex:1;min-width:120px">
+            <option value="Logic">Logic</option>
+            <option value="Math">Math</option>
+            <option value="Memory">Memory</option>
+            <option value="Lateral Thinking">Lateral Thinking</option>
+            <option value="Vocabulary">Vocabulary</option>
+          </select>
+          <select id="challengeDifficulty" class="form-input" aria-label="Challenge difficulty" style="flex:1;min-width:120px">
+            <option value="Easy">Easy</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="Hard">Hard</option>
+          </select>
+          <button class="btn-primary" onclick="generateChallenge()">&#x2728; New Challenge</button>
+        </div>
+        <div id="challengeList" style="display:flex;flex-direction:column;gap:0.75rem">
+          <div class="loading">Loading challenges&hellip;</div>
+        </div>
+      </div>
+
+      <!-- SUB-TAB: Decision Journal -->
+      <div id="itab-brainDecisions" class="inner-tab-content" style="display:none">
+        <form id="decisionForm" onsubmit="submitDecision(event)" style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.25rem">
+          <input id="decisionText" class="form-input" aria-label="What decision did you make" placeholder="What decision did you make?" required/>
+          <textarea id="decisionContext" class="form-input" aria-label="Decision context" rows="2" placeholder="Context / why you made this decision"></textarea>
+          <button type="submit" class="btn-primary">&#x1F4BE; Save &amp; Get AI Reflection</button>
+        </form>
+        <div id="decisionList" style="display:flex;flex-direction:column;gap:0.75rem">
+          <div class="loading">Loading journal&hellip;</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GROWTH TIMELINE TAB -->
+    <section id="tab-growth" class="tab-content">
+      <div class="page-header"><h2>🏆 Growth Timeline</h2></div>
+      <div id="milestoneTimeline" style="display:flex;flex-direction:column;gap:12px;padding:4px 0;">
+        <div class="loading">Loading milestones…</div>
+      </div>
+    </section>
   </main>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-content" style="max-width:420px">
+      <div class="modal-header">
+        <h3>&#x2699;&#xFE0F; Settings</h3>
+        <button class="modal-close" data-modal="settingsModal">&#x2715;</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1.2rem;padding:0.5rem 0 0.5rem">
+
+        <!-- Notification Preferences -->
+        <div class="settings-section">
+          <div class="settings-section-title">&#x1F514; Notification Preferences</div>
+          <div class="settings-row">
+            <label class="settings-label">Daily Summary Time</label>
+            <input type="time" id="settDailySummaryTime" class="form-input" style="width:120px;padding:0.3rem 0.5rem" value="08:00"/>
+          </div>
+          <div class="settings-row">
+            <label class="settings-label">Push Notifications</label>
+            <label class="sett-toggle">
+              <input type="checkbox" id="settPushEnabled"/>
+              <span class="sett-toggle-track"></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <label class="settings-label">Email Notifications</label>
+            <label class="sett-toggle">
+              <input type="checkbox" id="settEmailEnabled"/>
+              <span class="sett-toggle-track"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Morning Alarm -->
+        <div class="settings-section">
+          <div class="settings-section-title">&#x23F0; Morning Alarm</div>
+          <div class="settings-row">
+            <label class="settings-label">Wake-up Alarm</label>
+            <input type="time" id="settMorningAlarm" class="form-input" style="width:130px;padding:0.3rem 0.5rem" value="07:00"/>
+          </div>
+          <div class="settings-row" style="margin-top:0.4rem">
+            <label class="settings-label">Enable daily alarm</label>
+            <label class="sett-toggle">
+              <input type="checkbox" id="settMorningAlarmEnabled"/>
+              <span class="sett-toggle-track"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- AI Tone -->
+        <div class="settings-section">
+          <div class="settings-section-title">&#x1F916; AI Coach Tone</div>
+          <div class="settings-row">
+            <label class="settings-label">Tone</label>
+            <select id="settAiTone" class="form-input" style="width:160px;padding:0.3rem 0.5rem">
+              <option value="friendly">&#x1F604; Friendly</option>
+              <option value="motivational">&#x1F4AA; Motivational</option>
+              <option value="professional">&#x1F454; Professional</option>
+              <option value="chill">&#x1F60E; Chill</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Share App -->
+        <div class="settings-section">
+          <div class="settings-section-title">&#x1F517; Share App with Friends</div>
+          <div style="font-size:0.85rem;color:#8888aa;margin-bottom:0.5rem">Invite friends to join FORGE</div>
+          <button class="btn-secondary btn-sm" onclick="shareApp()" style="width:100%">&#x1F4E4; Share Link</button>
+        </div>
+
+        <!-- App Updates -->
+        <div class="settings-section">
+          <div class="settings-section-title">&#x1F4F1; App Updates</div>
+          <div style="font-size:0.85rem;color:#8888aa;margin-bottom:0.5rem">Get the latest version if your app looks outdated</div>
+          <button class="btn-secondary btn-sm" onclick="checkForUpdates()" style="width:100%">&#x1F504; Update App</button>
+        </div>
+
+        <!-- Account -->
+        <div class="settings-section" style="border:none">
+          <div class="settings-section-title">&#x1F464; Account</div>
+          <!-- Profile display -->
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.9rem;padding:0.6rem;background:rgba(255,255,255,0.04);border-radius:10px">
+            <div id="settProfileInitial" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#4facfe);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;font-weight:700;flex-shrink:0">?</div>
+            <div>
+              <div id="settProfileName" style="font-weight:600;color:var(--text-primary)">Loading…</div>
+              <div id="settProfileEmail" style="font-size:0.8rem;color:#8888aa;margin-top:0.15rem">—</div>
+            </div>
+          </div>
+          <button class="btn-secondary btn-sm" onclick="closeModal('settingsModal');document.getElementById('logoutBtn').click();" style="width:100%;color:#ef4444;border-color:#ef4444">&#x1F6AA; Logout</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" data-modal="settingsModal">Cancel</button>
+        <button type="button" class="btn-primary" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+  </div>
 
   <!-- AI CHAT OVERLAY -->
   <div id="aiChatOverlay" class="ai-chat-overlay hidden">
@@ -448,13 +732,36 @@
       <div id="dailySummaryPanel" class="hidden ai-insight daily-summary-panel"></div>
       <div id="chatWindow" class="chat-window"></div>
       <div class="chat-input-bar">
-        <textarea id="chatInput" placeholder="Ask your AI coach&hellip;" rows="2"></textarea>
+        <textarea id="chatInput" aria-label="Ask your AI coach" placeholder="Ask your AI coach&hellip;" rows="2"></textarea>
         <button class="btn-primary" id="sendChatBtn">Send</button>
       </div>
     </div>
   </div>
 
-  <button id="aiFab" class="ai-fab" title="Open AI Coach">🤖</button>
+  <!-- Hidden original buttons - logic untouched, triggered by speed dial -->
+  <button id="aiFab" class="ai-fab" title="Open AI Coach" style="display:none">🤖</button>
+
+  <!-- ===== FORGE UNIFIED FAB (speed dial) ===== -->
+  <div id="forgeFabWrap" style="position:fixed;bottom:5.5rem;right:1rem;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+    <!-- Speed dial options (hidden by default) -->
+    <div id="forgeSpeedDial" style="display:none;flex-direction:column;align-items:flex-end;gap:8px;">
+      <div class="forge-dial-item" onclick="document.getElementById('forgeFabWrap').classList.remove('open');document.getElementById('forgeSpeedDial').style.display='none';document.getElementById('forgeDimOverlay').style.display='none';document.getElementById('aiFab').click();">
+        <span class="forge-dial-label">💬 AI Chat</span>
+        <button class="forge-dial-btn" aria-label="Open AI Chat">💬</button>
+      </div>
+      <div class="forge-dial-item" onclick="document.getElementById('forgeFabWrap').classList.remove('open');document.getElementById('forgeSpeedDial').style.display='none';document.getElementById('forgeDimOverlay').style.display='none';var vf=document.getElementById('voiceFab');if(vf)vf.click();">
+        <span class="forge-dial-label">🎤 Voice</span>
+        <button class="forge-dial-btn" aria-label="Voice Command">🎤</button>
+      </div>
+    </div>
+    <!-- Main unified button -->
+    <button id="forgeFabMain" aria-label="Open FORGE actions" onclick="(function(){var d=document.getElementById('forgeSpeedDial');var o=document.getElementById('forgeDimOverlay');var open=d.style.display==='flex';d.style.display=open?'none':'flex';o.style.display=open?'none':'block';document.getElementById('forgeFabWrap').classList.toggle('open',!open);})()" style="width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#6c63ff,#4facfe);color:#fff;font-size:1.4rem;cursor:pointer;box-shadow:0 4px 18px rgba(108,99,255,0.55);display:flex;align-items:center;justify-content:center;transition:transform 0.2s;">✦</button>
+  </div>
+  <!-- Dim overlay to close speed dial on outside tap -->
+  <div id="forgeDimOverlay" style="display:none;position:fixed;inset:0;z-index:9998;" onclick="document.getElementById('forgeSpeedDial').style.display='none';this.style.display='none';document.getElementById('forgeFabWrap').classList.remove('open');"></div>
+
+  <!-- Developer watermark -->
+  <div class="dev-watermark">Developed ❤️ by Arjun Ramaswamy Mudaliyar</div>
 
   <!-- BOTTOM NAV — CSS icons, no emoji -->
   <nav class="bottom-nav">
@@ -487,6 +794,10 @@
       <span class="nav-label">People</span>
       <span id="peopleBadge" class="nav-badge hidden">0</span>
     </a>
+    <a href="#" class="nav-item" data-tab="braincoach">
+      <span class="nav-icon" style="font-size:1.3rem">&#x1F9E0;</span>
+      <span class="nav-label">Coach</span>
+    </a>
   </nav>
 
   <!-- TASK MODAL -->
@@ -498,42 +809,42 @@
       </div>
       <form id="taskForm">
         <input type="hidden" id="taskEditId" value=""/>
-        <div class="form-group"><label>Title *</label><input type="text" id="taskTitle" required/></div>
-        <div class="form-group"><label>Description</label><textarea id="taskDesc" rows="3"></textarea></div>
+        <div class="form-group"><label>Title *</label><input type="text" id="taskTitle" aria-label="Task title" required/></div>
+        <div class="form-group"><label>Description</label><textarea id="taskDesc" aria-label="Task description" rows="3"></textarea></div>
         <div class="form-row">
           <div class="form-group"><label>Priority</label>
-            <select id="taskPriority">
+            <select id="taskPriority" aria-label="Task priority">
               <option value="LOW">Low</option>
               <option value="MEDIUM" selected>Medium</option>
               <option value="HIGH">High</option>
               <option value="URGENT">Urgent</option>
             </select>
           </div>
-          <div class="form-group"><label>Due Date</label><input type="datetime-local" id="taskDue"/></div>
+          <div class="form-group"><label>Due Date</label><input type="datetime-local" id="taskDue" aria-label="Task due date"/></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Category</label><input type="text" id="taskCategory" placeholder="Work, Personal&hellip;"/></div>
-          <div class="form-group"><label>Section</label><input type="text" id="taskSection" placeholder="Morning Routine, Sprint 1&hellip;"/></div>
+          <div class="form-group"><label>Category</label><input type="text" id="taskCategory" aria-label="Task category" placeholder="Work, Personal&hellip;"/></div>
+          <div class="form-group"><label>Section</label><input type="text" id="taskSection" aria-label="Task section" placeholder="Morning Routine, Sprint 1&hellip;"/></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Scheduled Date</label><input type="date" id="taskScheduledDate"/></div>
+          <div class="form-group"><label>Scheduled Date</label><input type="date" id="taskScheduledDate" aria-label="Task scheduled date"/></div>
           <div class="form-group"><label>Fitness Category</label>
-            <select id="taskFitnessCategoryId">
+            <select id="taskFitnessCategoryId" aria-label="Fitness category">
               <option value="">&#x2014; None &#x2014;</option>
             </select>
             <button type="button" class="btn-secondary btn-sm" id="addCategoryBtn" style="margin-top:0.35rem;font-size:0.78rem">+ Custom Category</button>
           </div>
         </div>
         <div class="form-row" id="caloriesRow" style="display:none">
-          <div class="form-group"><label>Calories Consumed</label><input type="number" id="taskCaloriesConsumed" min="0" placeholder="0"/></div>
-          <div class="form-group"><label>Calories Burned</label><input type="number" id="taskCaloriesBurned" min="0" placeholder="0"/></div>
+          <div class="form-group"><label>Calories Consumed</label><input type="number" id="taskCaloriesConsumed" aria-label="Calories consumed" min="0" placeholder="0"/></div>
+          <div class="form-group"><label>Calories Burned</label><input type="number" id="taskCaloriesBurned" aria-label="Calories burned" min="0" placeholder="0"/></div>
         </div>
         <div class="form-group"><label>Parent Task <span style="font-weight:400;color:var(--text-secondary)">(optional — for nested exercises)</span></label>
-          <select id="taskParentId"><option value="">&#x2014; Top-level task &#x2014;</option></select>
+          <select id="taskParentId" aria-label="Parent task"><option value="">&#x2014; Top-level task &#x2014;</option></select>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Duration (minutes)</label>
-            <input type="number" id="taskDuration" min="1" placeholder="e.g. 30"/>
+            <input type="number" id="taskDuration" aria-label="Task duration in minutes" min="1" placeholder="e.g. 30"/>
           </div>
           <div class="form-group" style="flex-direction:row;align-items:center;gap:0.5rem;padding-top:1.6rem">
             <input type="checkbox" id="taskAutoComplete" style="width:auto;margin:0"/>
@@ -549,21 +860,21 @@
           </div>
           <div class="form-group" id="recurringTimeGroup" style="display:none">
             <label>Reminder Time</label>
-            <input type="time" id="taskRecurringTime" value="08:00"/>
+            <input type="time" id="taskRecurringTime" aria-label="Daily reminder time" value="08:00"/>
           </div>
         </div>
         <!-- One-time Alarm -->
         <div class="form-row" style="align-items:flex-end">
           <div class="form-group">
             <label>&#x23F0; Alarm Date &amp; Time <span style="font-weight:400;color:var(--text-secondary)">(one-time &mdash; sends email &amp; notification)</span></label>
-            <input type="datetime-local" id="taskAlarmTime"/>
+            <input type="datetime-local" id="taskAlarmTime" aria-label="Alarm date and time"/>
           </div>
           <div class="form-group" style="justify-content:flex-end;padding-top:1.6rem">
             <button type="button" class="btn-secondary btn-sm" onclick="document.getElementById('taskAlarmTime').value=''">Clear Alarm</button>
           </div>
         </div>
         <div class="form-group"><label>Link to Goal</label>
-          <select id="taskGoalId"><option value="">&#x2014; No goal &#x2014;</option></select>
+          <select id="taskGoalId" aria-label="Linked goal"><option value="">&#x2014; No goal &#x2014;</option></select>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn-secondary" data-modal="taskModal">Cancel</button>
@@ -583,11 +894,11 @@
       <input type="hidden" id="progressTaskId"/>
       <div class="form-group">
         <label>Completion % <span style="color:var(--text-muted);font-weight:400">(0&ndash;100)</span></label>
-        <input type="number" id="progressPct" min="0" max="100" value="0" style="max-width:120px"/>
+        <input type="number" id="progressPct" min="0" max="100" value="0" aria-label="Progress percentage" style="max-width:120px"/>
       </div>
       <div class="form-group">
         <label>Note <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
-        <textarea id="progressNote" rows="3" placeholder="What did you accomplish? Any blockers?"></textarea>
+        <textarea id="progressNote" rows="3" aria-label="Progress note" placeholder="What did you accomplish? Any blockers?"></textarea>
       </div>
       <div class="modal-actions">
         <button class="btn-secondary" data-modal="collabProgressModal">Cancel</button>
@@ -605,11 +916,11 @@
       </div>
       <form id="goalForm">
         <input type="hidden" id="goalEditId" value=""/>
-        <div class="form-group"><label>Title *</label><input type="text" id="goalTitle" required/></div>
-        <div class="form-group"><label>Description</label><textarea id="goalDesc" rows="3"></textarea></div>
+        <div class="form-group"><label>Title *</label><input type="text" id="goalTitle" aria-label="Goal title" required/></div>
+        <div class="form-group"><label>Description</label><textarea id="goalDesc" aria-label="Goal description" rows="3"></textarea></div>
         <div class="form-row">
           <div class="form-group"><label>Category</label>
-            <select id="goalCategory">
+            <select id="goalCategory" aria-label="Goal category">
               <option value="CAREER">Career</option>
               <option value="FINANCE">Finance</option>
               <option value="FITNESS">Fitness</option>
@@ -620,7 +931,7 @@
               <option value="OTHER">Other</option>
             </select>
           </div>
-          <div class="form-group"><label>Target Date</label><input type="date" id="goalTarget"/></div>
+          <div class="form-group"><label>Target Date</label><input type="date" id="goalTarget" aria-label="Goal target date"/></div>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn-secondary" data-modal="goalModal">Cancel</button>
@@ -639,20 +950,20 @@
       </div>
       <form id="fitProfileForm" onsubmit="saveFitnessProfile(event)">
         <div class="form-row">
-          <div class="form-group"><label>Age</label><input type="number" id="profAge" min="10" max="100" placeholder="25"/></div>
-          <div class="form-group"><label>Weight (kg)</label><input type="number" id="profWeight" step="0.1" placeholder="70"/></div>
+          <div class="form-group"><label>Age</label><input type="number" id="profAge" aria-label="Age" min="10" max="100" placeholder="25"/></div>
+          <div class="form-group"><label>Weight (kg)</label><input type="number" id="profWeight" aria-label="Weight in kg" step="0.1" placeholder="70"/></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Height (cm)</label><input type="number" id="profHeight" placeholder="170"/></div>
+          <div class="form-group"><label>Height (cm)</label><input type="number" id="profHeight" aria-label="Height in cm" placeholder="170"/></div>
           <div class="form-group"><label>Gender</label>
-            <select id="profGender">
+            <select id="profGender" aria-label="Gender">
               <option value="M">Male</option>
               <option value="F">Female</option>
             </select>
           </div>
         </div>
         <div class="form-group"><label>Activity Level</label>
-          <select id="profActivity">
+          <select id="profActivity" aria-label="Activity level">
             <option value="SEDENTARY">Sedentary</option>
             <option value="LIGHT">Light (1-3 days)</option>
             <option value="MODERATE" selected>Moderate (3-5 days)</option>
@@ -662,7 +973,7 @@
         </div>
         <div class="form-group">
           <label>Daily Calorie Goal (kcal)</label>
-          <input type="number" id="profGoal" min="800" max="8000" placeholder="Auto-calculate from data above"/>
+          <input type="number" id="profGoal" aria-label="Daily calorie goal" min="800" max="8000" placeholder="Auto-calculate from data above"/>
           <small style="color:var(--text-muted);font-size:0.75rem">Leave blank to auto-compute via Mifflin-St Jeor</small>
         </div>
         <div class="modal-actions">
@@ -722,11 +1033,11 @@
         <div id="focusPreStart">
           <div class="form-group">
             <label>Duration (minutes)</label>
-            <input type="number" id="focusDuration" value="25" min="1" max="180" class="form-control"/>
+            <input type="number" id="focusDuration" aria-label="Focus duration in minutes" value="25" min="1" max="180" class="form-control"/>
           </div>
           <div class="form-group">
             <label>Link to Task (optional)</label>
-            <select id="focusTaskLink" class="form-control">
+            <select id="focusTaskLink" aria-label="Link to task" class="form-control">
               <option value="">— No linked task —</option>
             </select>
           </div>
@@ -769,6 +1080,243 @@
   </div>
 
   <script src="js/api.js"></script>
+  <script src="js/alarm-overlay.js"></script>
   <script src="js/dashboard.js"></script>
+  <script src="js/voice-commander.js"></script>
+  <script src="js/mood-logger.js"></script>
+  <script src="js/habit-tracker.js"></script>
+  <script src="js/morning-briefing.js"></script>
+  <script src="js/evening-reflection.js"></script>
+
+  <!-- ===== EVENING REFLECTION BOTTOM SHEET ===== -->
+  <div class="refl-overlay" id="reflSheetOverlay" onclick="document.getElementById('reflSheetOverlay').classList.remove('active');document.getElementById('reflBottomSheet').classList.remove('active');"></div>
+  <div class="refl-bottom-sheet" id="reflBottomSheet">
+    <div class="refl-sheet-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div style="font-size:1rem;font-weight:700;color:#fff;">&#x1F319; Evening Reflection</div>
+      <button onclick="document.getElementById('reflSheetOverlay').classList.remove('active');document.getElementById('reflBottomSheet').classList.remove('active');" style="background:none;border:none;color:#888;font-size:1.3rem;cursor:pointer;line-height:1;">&#x2715;</button>
+    </div>
+    <div id="eveningReflectionContainer" style="overflow-y:auto;max-height:calc(80vh - 120px);"></div>
+  </div>
+  <script>
+    // ===== Accountability Score =====
+    async function loadAccountabilityScore() {
+      try {
+        const json = await apiGet('/api/score/today');
+        if (json && json.data) {
+          const s = json.data.score || 0;
+          const card = document.getElementById('accountabilityScoreCard');
+          const valEl = document.getElementById('scoreValue');
+          const cEl   = document.getElementById('scoreComment');
+          const barEl = document.getElementById('scoreValueBar');
+          // Show parent summary card + expanded score card
+          var outer = document.getElementById('dashboardSummaryCard');
+          if (outer) outer.style.display = 'block';
+          if (card) card.style.display = 'flex';
+          if (valEl) {
+            valEl.textContent = s;
+            valEl.style.color = s >= 70 ? '#10b981' : s >= 40 ? '#f59e0b' : '#ef4444';
+          }
+          if (cEl) cEl.textContent = json.data.aiComment || '';
+          // Sync compact bar
+          if (barEl) {
+            barEl.textContent = s;
+            barEl.style.color = s >= 70 ? '#10b981' : s >= 40 ? '#f59e0b' : '#ef4444';
+          }
+        }
+      } catch(e) { console.warn('score load failed', e); }
+    }
+
+    // ===== One Thing =====
+    async function loadOneThing() {
+      const card = document.getElementById('oneThingCard');
+      const txt  = document.getElementById('oneThingText');
+      const btn  = document.getElementById('btnCompleteOneThing');
+      var outer  = document.getElementById('dashboardSummaryCard');
+      if (outer) outer.style.display = 'block';
+      if (card) card.style.display = 'flex';
+      const timeoutPromise = new Promise(function(_, reject) {
+        setTimeout(function() { reject(new Error('timeout')); }, 5000);
+      });
+      try {
+        const json = await Promise.race([apiGet('/api/one-thing/today'), timeoutPromise]);
+        if (json && json.data && json.data.taskText) {
+          if (txt) { txt.textContent = json.data.taskText; txt.style.cursor = 'default'; txt.style.color = 'var(--text,#fff)'; txt.onclick = null; }
+          if (btn && !json.data.completed) btn.style.display = 'block';
+          // Add Change button if not already there
+          if (card && !document.getElementById('btnChangeOneThing')) {
+            var changeBtn = document.createElement('button');
+            changeBtn.id = 'btnChangeOneThing';
+            changeBtn.title = 'Change One Thing';
+            changeBtn.innerHTML = '&#x270F;&#xFE0F;';
+            changeBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:0.85rem;opacity:0.55;padding:2px 4px;flex-shrink:0;';
+            changeBtn.onclick = function(e) {
+              e.stopPropagation();
+              document.getElementById('btnChangeOneThing')?.remove();
+              var existing = document.getElementById('oneThingSetInline');
+              if (existing) existing.remove();
+              if (btn) btn.style.display = 'none';
+              _showOneThingSetPrompt();
+              document.getElementById('oneThingText')?.click();
+            };
+            card.insertBefore(changeBtn, btn);
+          }
+          _syncOneThingBar(json.data.taskText);
+        } else {
+          _showOneThingSetPrompt();
+          _syncOneThingBar('+ Set your One Thing');
+        }
+      } catch(e) {
+        _showOneThingSetPrompt();
+        _syncOneThingBar('+ Set your One Thing');
+      }
+    }
+
+    function _syncOneThingBar(text) {
+      var bar = document.getElementById('oneThingTextBar');
+      if (bar) bar.textContent = text || 'Not set';
+    }
+
+    // ===== Toggle combined summary card =====
+    function toggleDashCard() {
+      var body  = document.getElementById('dashExpandedSection');
+      var arrow = document.getElementById('dashCardArrow');
+      if (!body) return;
+      var isOpen = body.style.display !== 'none';
+      body.style.display = isOpen ? 'none' : 'block';
+      if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(90deg)';
+    }
+
+    function _showOneThingSetPrompt() {
+      const txt  = document.getElementById('oneThingText');
+      const card = document.getElementById('oneThingCard');
+      if (!txt || !card) return;
+      txt.textContent = '\u2795 Set your One Thing for today';
+      txt.style.cursor = 'pointer';
+      txt.style.color = 'var(--accent,#6c63ff)';
+      txt.style.fontWeight = '500';
+      txt.onclick = function() {
+        var existing = document.getElementById('oneThingSetInline');
+        if (existing) { existing.style.display = 'flex'; return; }
+        var form = document.createElement('div');
+        form.id = 'oneThingSetInline';
+        form.style.cssText = 'display:flex;gap:8px;align-items:center;width:100%;margin-top:4px;flex-basis:100%';
+        form.innerHTML = '<input id="oneThingInputVal" type="text" aria-label="One Thing for today" placeholder="What is your One Thing today?" style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:#fff;font-size:0.85rem;outline:none"/><button onclick="saveOneThing()" style="background:var(--accent,#6c63ff);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:0.85rem;cursor:pointer;white-space:nowrap">Save</button>';
+        card.appendChild(form);
+        setTimeout(function() { var i = document.getElementById('oneThingInputVal'); if(i) i.focus(); }, 50);
+      };
+    }
+
+    async function saveOneThing() {
+      var input = document.getElementById('oneThingInputVal');
+      var text  = (input ? input.value : '').trim();
+      if (!text) return;
+      try {
+        await apiPost('/api/one-thing', { taskText: text });
+        var form = document.getElementById('oneThingSetInline');
+        if (form) form.remove();
+        loadOneThing();
+      } catch(e) {
+        if (typeof toast === 'function') toast('Failed to save. Try again.', 'error');
+      }
+    }
+
+    async function completeOneThing() {
+      try {
+        await apiPatch('/api/one-thing/today/complete', {});
+        const btn = document.getElementById('btnCompleteOneThing');
+        if (btn) btn.style.display = 'none';
+        loadAccountabilityScore();
+      } catch(e) {}
+    }
+
+    // ===== Growth Timeline (milestones) =====
+    async function loadMilestones() {
+      try {
+        const json = await apiGet('/api/milestones');
+        const tl = document.getElementById('milestoneTimeline');
+        if (!tl) return;
+        const milestones = (json && json.data) ? json.data : [];
+        if (milestones.length === 0) {
+          tl.innerHTML = '<div style="text-align:center;color:var(--text-secondary,#a0a0b0);padding:30px 0;">No milestones yet — keep going! 🚀</div>';
+          return;
+        }
+        tl.innerHTML = milestones.map(m => `
+          <div style="display:flex;align-items:center;gap:14px;background:var(--card-bg,#1e1e2e);border-radius:12px;padding:14px 16px;border-left:4px solid #6366f1;">
+            <span style="font-size:1.4rem;">🏆</span>
+            <div>
+              <div style="font-size:0.95rem;font-weight:600;color:var(--text,#fff);">${(m.label||'').replace(/</g,'&lt;')}</div>
+              <div style="font-size:0.75rem;color:var(--text-secondary,#a0a0b0);margin-top:2px;">${m.date||''}</div>
+            </div>
+          </div>`).join('');
+      } catch(e) {}
+    }
+
+    // Render mood logger & habit tracker into task tab
+    document.addEventListener('DOMContentLoaded', function() {
+      // Close fitness More dropdown on outside click
+      document.addEventListener('click', function(e) {
+        var w = document.getElementById('fitMoreWrap');
+        if (w && !w.contains(e.target)) w.classList.remove('open');
+      });
+      // Insert containers dynamically after DOM settles
+      setTimeout(function() {
+        // Mood logger & Habit tracker — render INSIDE dashboard summary card
+        var _ehInCard = document.getElementById('energyHabitsInCard');
+        if (_ehInCard && !document.getElementById('moodLoggerContainer')) {
+          const moodDiv = document.createElement('div');
+          moodDiv.id = 'moodLoggerContainer';
+          moodDiv.style.padding = '8px 16px 4px';
+          _ehInCard.appendChild(moodDiv);
+          if (window.MoodLogger) window.MoodLogger.render('moodLoggerContainer');
+        }
+        if (_ehInCard && !document.getElementById('habitTrackerContainer')) {
+          const habitDiv = document.createElement('div');
+          habitDiv.id = 'habitTrackerContainer';
+          habitDiv.style.padding = '4px 16px 10px';
+          _ehInCard.appendChild(habitDiv);
+          if (window.HabitTracker) window.HabitTracker.render('habitTrackerContainer');
+        }
+        // Live habit count badge in compact bar battery icon area
+        setTimeout(function() {
+          var _hl = document.getElementById('habitList');
+          if (_hl) {
+            var _updateCount = function() {
+              var total = _hl.querySelectorAll('.habit-item').length;
+              var done  = _hl.querySelectorAll('.habit-item.completed').length;
+              var el = document.getElementById('scoreValueBar');
+              // Optionally update — no-op to keep compact bar clean
+            };
+            new MutationObserver(_updateCount).observe(_hl, { childList: true, subtree: true });
+          }
+        }, 400);
+        // Evening reflection — render into bottom sheet (lazy on first open)
+        window._reflRendered = false;
+        // Auto-close bottom sheet when reflection is saved
+        (function() {
+          var _reflObs = null;
+          function _watchReflSave() {
+            var badge = document.getElementById('reflDoneBadge');
+            if (!badge || _reflObs) return;
+            _reflObs = new MutationObserver(function() {
+              if (badge.style.display !== 'none' && badge.style.display !== '') {
+                setTimeout(function() {
+                  document.getElementById('reflSheetOverlay').classList.remove('active');
+                  document.getElementById('reflBottomSheet').classList.remove('active');
+                }, 1200);
+              }
+            });
+            _reflObs.observe(badge, { attributes: true, attributeFilter: ['style'] });
+          }
+          document.getElementById('reflSheetOverlay').addEventListener('click', function() {}, false);
+          // Re-check when sheet opens
+          document.getElementById('reflBottomSheet').addEventListener('transitionend', _watchReflSave);
+        })();
+        loadAccountabilityScore();
+        loadOneThing();
+        loadMilestones();
+      }, 800);
+    });
+  </script>
 </body>
 </html>

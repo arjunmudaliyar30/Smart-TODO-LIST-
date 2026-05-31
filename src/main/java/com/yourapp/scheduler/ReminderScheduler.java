@@ -71,7 +71,7 @@ public class ReminderScheduler {
     /**
      * Runs daily at 8 AM — sends a daily summary of pending tasks.
      */
-    @Scheduled(cron = "0 0 8 * * *")
+    @Scheduled(cron = "0 0 8 * * *", zone = "Asia/Kolkata")
     public void sendDailySummary() {
         log.info("Daily summary scheduler triggered");
 

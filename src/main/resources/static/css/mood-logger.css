@@ -1,0 +1,81 @@
+/* ========= Mood Logger ========= */
+.mood-logger-card {
+    background: var(--card-bg, #1e1e2e);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+}
+
+.mood-logger-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary, #a0a0b0);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.mood-sliders {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mood-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mood-slider-label {
+    width: 70px;
+    font-size: 0.85rem;
+    color: var(--text-secondary, #a0a0b0);
+}
+
+.mood-slider-row input[type="range"] {
+    flex: 1;
+    accent-color: #6366f1;
+    cursor: pointer;
+}
+
+.mood-slider-value {
+    width: 24px;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text, #fff);
+}
+
+.mood-emoji {
+    font-size: 1.3rem;
+    width: 28px;
+    text-align: center;
+}
+
+.btn-log-mood {
+    margin-top: 14px;
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-log-mood:hover { opacity: 0.88; }
+
+.mood-logged-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #10b981;
+    margin-top: 10px;
+    justify-content: center;
+}

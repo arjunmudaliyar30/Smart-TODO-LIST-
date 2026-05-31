@@ -349,6 +349,26 @@ public class TaskService {
         return saved;
     }
 
+    /**
+     * Removes the current user from a task's collaborator list.
+     * The task owner cannot leave their own task.
+     */
+    public void leaveTask(String userId, String taskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Task not found"));
+        if (userId.equals(task.getUserId())) {
+            throw new IllegalArgumentException("You are the owner — delete the task instead of leaving it");
+        }
+        if (task.getCollaboratorIds() != null) {
+            task.getCollaboratorIds().remove(userId);
+        }
+        if (task.getCollaboratorProgress() != null) {
+            task.getCollaboratorProgress().remove(userId);
+        }
+        taskRepository.save(task);
+    }
+
+
     /** Sends a notification to every collaborator of a task (best-effort, never throws). */
     private void notifyCollaborators(Task task, String message, String type) {
         if (task.getCollaboratorIds() == null || task.getCollaboratorIds().isEmpty()) return;

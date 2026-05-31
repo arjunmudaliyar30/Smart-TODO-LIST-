@@ -3,6 +3,7 @@ package com.yourapp.scheduler;
 import com.yourapp.model.Task;
 import com.yourapp.repository.TaskRepository;
 import com.yourapp.repository.UserRepository;
+import com.yourapp.service.AlarmService;
 import com.yourapp.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,8 +34,9 @@ public class AlarmScheduler {
     private final TaskRepository      taskRepository;
     private final UserRepository      userRepository;
     private final NotificationService notificationService;
+    private final AlarmService        alarmService;
 
-    @Scheduled(cron = "0 * * * * *")   // every minute at :00 seconds
+    @Scheduled(cron = "0 * * * * *", zone = "Asia/Kolkata")   // every minute at :00 seconds
     public void fireAlarms() {
         LocalDateTime now = LocalDateTime.now();
         List<Task> pending = taskRepository.findPendingAlarms(now);
@@ -49,6 +51,9 @@ public class AlarmScheduler {
                                         ? " — " + task.getDescription() : ""),
                         "ALARM");
             });
+
+            // Also create a standalone Alarm so alarm-overlay.js shows the fullscreen overlay
+            alarmService.create(task.getUserId(), "⏰ " + task.getTitle(), task.getAlarmTime());
 
             // Mark fired so the alarm doesn't repeat
             task.setAlarmFired(true);

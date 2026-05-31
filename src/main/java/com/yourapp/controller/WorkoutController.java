@@ -141,7 +141,7 @@ public class WorkoutController {
     public ResponseEntity<ApiResponse<Workout>> addExercise(
             @AuthenticationPrincipal User user,
             @PathVariable String id,
-            @RequestBody ExerciseRequest request) {
+            @Valid @RequestBody ExerciseRequest request) {
         Workout updated = workoutService.addExercise(user.getId(), id, request);
         return ResponseEntity.ok(ApiResponse.success("Exercise added", updated));
     }
@@ -151,7 +151,7 @@ public class WorkoutController {
             @AuthenticationPrincipal User user,
             @PathVariable String id,
             @PathVariable int index,
-            @RequestBody ExerciseRequest request) {
+            @Valid @RequestBody ExerciseRequest request) {
         Workout updated = workoutService.updateExercise(user.getId(), id, index, request);
         return ResponseEntity.ok(ApiResponse.success("Exercise updated", updated));
     }

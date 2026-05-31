@@ -1,0 +1,134 @@
+/* ========= Habit Tracker CSS ========= */
+.habit-tracker-card {
+    background: var(--card-bg, #1e1e2e);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+}
+
+.habit-tracker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.habit-tracker-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary, #a0a0b0);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.btn-add-habit {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-add-habit:hover { opacity: 0.88; }
+
+.habit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.habit-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg, #13131f);
+    border-radius: 10px;
+    border: 1px solid var(--border, rgba(255,255,255,0.07));
+    transition: border-color 0.2s;
+}
+
+.habit-item.completed {
+    border-color: #10b981;
+    opacity: 0.85;
+}
+
+.habit-checkbox {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #6366f1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.habit-checkbox.checked {
+    background: #10b981;
+    border-color: #10b981;
+    color: #fff;
+    font-size: 0.75rem;
+}
+
+.habit-name {
+    flex: 1;
+    font-size: 0.9rem;
+    color: var(--text, #fff);
+}
+
+.habit-streak-badge {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(99,102,241,0.15);
+    color: #818cf8;
+}
+
+.habit-add-form {
+    margin-top: 14px;
+    display: none;
+    gap: 8px;
+    flex-direction: column;
+}
+
+.habit-add-form.visible { display: flex; }
+
+.habit-add-form input {
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+    background: var(--bg, #13131f);
+    color: var(--text, #fff);
+    font-size: 0.85rem;
+    outline: none;
+}
+
+.habit-add-form input:focus {
+    border-color: #6366f1;
+}
+
+.btn-save-habit {
+    padding: 9px;
+    background: #6366f1;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.habits-empty {
+    text-align: center;
+    color: var(--text-secondary, #a0a0b0);
+    font-size: 0.85rem;
+    padding: 20px 0;
+}

@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * Supports selective sharing via DailyNoteShare.
  */
 @Document(collection = "daily_notes")
-@CompoundIndex(name = "user_date_unique", def = "{'userId': 1, 'date': 1}", unique = true)
+@CompoundIndex(name = "user_date_idx", def = "{'userId': 1, 'date': 1}")
 @Data
 @Builder
 @NoArgsConstructor
@@ -29,8 +29,19 @@ public class DailyNote {
 
     private LocalDate date;
 
+    /** Optional note title — shown as card heading. */
+    private String title;
+
     /** Long-form journal content. Nullable — auto-saved. */
     private String content;
+
+    /** Card accent color (e.g. "#6c63ff", "#f59e0b", "default"). */
+    @Builder.Default
+    private String color = "default";
+
+    /** Whether this note is pinned to the top of the list. */
+    @Builder.Default
+    private boolean pinned = false;
 
     /** Free-text mood label: HAPPY, GOOD, NEUTRAL, TIRED, STRESSED, etc. */
     private String mood;

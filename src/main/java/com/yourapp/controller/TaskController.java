@@ -151,6 +151,15 @@ public class TaskController {
         return ResponseEntity.ok(ApiResponse.success("Collaborator added", updated));
     }
 
+    /** DELETE /api/tasks/{id}/leave — remove the current user from the task's collaborator list */
+    @DeleteMapping("/{id}/leave")
+    public ResponseEntity<ApiResponse<Void>> leaveTask(
+            @AuthenticationPrincipal User user,
+            @PathVariable String id) {
+        taskService.leaveTask(user.getId(), id);
+        return ResponseEntity.ok(ApiResponse.success("Left task successfully", null));
+    }
+
     /** Step 2: PATCH /api/tasks/{id}/toggle-status -- no request body needed */
     @PatchMapping("/{id}/toggle-status")
     public ResponseEntity<ApiResponse<Task>> toggleStatus(

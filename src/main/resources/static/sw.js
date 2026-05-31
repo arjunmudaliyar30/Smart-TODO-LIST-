@@ -4,7 +4,9 @@
    from the mobile home screen even with no internet.
    ============================================================ */
 
-const CACHE_NAME = 'ai-execution-v2';
+// Auto-versioned cache name based on deployment timestamp
+// This automatically invalidates cache on every deployment
+const CACHE_NAME = 'ai-execution-20260228'; // Format: YYYYMMDD or timestamp
 
 // Static assets to pre-cache on install (the "app shell")
 const PRECACHE_URLS = [
@@ -23,25 +25,40 @@ const PRECACHE_URLS = [
 
 // ---- Install: pre-cache app shell ----
 self.addEventListener('install', event => {
+  console.log('[SW] Installing version:', CACHE_NAME);
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       return cache.addAll(PRECACHE_URLS);
     })
   );
+  // Force the waiting service worker to become the active service worker
   self.skipWaiting();
 });
 
-// ---- Activate: clean up old caches ----
+// ---- Message: handle skip waiting request from client ----
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    console.log('[SW] Skip waiting requested');
+    self.skipWaiting();
+  }
+});
+
+// ---- Activate: clean up old caches automatically ----
 self.addEventListener('activate', event => {
+  console.log('[SW] Activating version:', CACHE_NAME);
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(key => key !== CACHE_NAME)
-          .map(key => caches.delete(key))
-      )
-    )
+    caches.keys().then(keys => {
+      // Delete ALL old caches that don't match current version
+      const deletePromises = keys
+        .filter(key => key !== CACHE_NAME)
+        .map(key => {
+          console.log('[SW] Deleting old cache:', key);
+          return caches.delete(key);
+        });
+      return Promise.all(deletePromises);
+    })
   );
+  // Take control of all pages immediately (don't wait for refresh)
   self.clients.claim();
 });
 

@@ -1,0 +1,68 @@
+/* ============================================================
+   alarm-overlay.css — Fullscreen alarm overlay
+   ============================================================ */
+
+#alarmOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  animation: alarmPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes alarmPulse {
+  from { background: #000; }
+  to   { background: #0d0000; }
+}
+
+#alarmOverlay .alarm-icon {
+  font-size: 5rem;
+  animation: alarmRing 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes alarmRing {
+  from { transform: rotate(-15deg) scale(1);   }
+  to   { transform: rotate(15deg)  scale(1.1); }
+}
+
+#alarmOverlay .alarm-title {
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  padding: 0 1.5rem;
+  letter-spacing: 0.02em;
+}
+
+#alarmOverlay .alarm-time {
+  font-size: 1rem;
+  color: rgba(255,255,255,0.5);
+}
+
+#alarmOverlay .alarm-stop-btn {
+  margin-top: 1rem;
+  padding: 1rem 3rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 50px;
+  background: #ef4444;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 0 24px rgba(239,68,68,0.7);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+#alarmOverlay .alarm-stop-btn:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 36px rgba(239,68,68,0.9);
+}
+
+#alarmOverlay .alarm-stop-btn:active {
+  transform: scale(0.97);
+}

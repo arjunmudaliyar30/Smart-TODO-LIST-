@@ -54,6 +54,46 @@ public class UserController {
     }
 
     /**
+     * PATCH /api/users/me/preferences
+     * Updates user notification & UI preferences.
+     * Body: { "pushNotificationsEnabled": true, "dailySummaryEnabled": true,
+     *         "dailySummaryHour": 8, "emailNotificationsEnabled": true,
+     *         "aiTone": "friendly" }
+     */
+    @PatchMapping("/me/preferences")
+    public ResponseEntity<ApiResponse<User>> updatePreferences(
+            @AuthenticationPrincipal User user,
+            @RequestBody Map<String, Object> body) {
+
+        if (body.containsKey("pushNotificationsEnabled")) {
+            user.setPushNotificationsEnabled(
+                    Boolean.parseBoolean(body.get("pushNotificationsEnabled").toString()));
+        }
+        if (body.containsKey("dailySummaryEnabled")) {
+            user.setDailySummaryEnabled(
+                    Boolean.parseBoolean(body.get("dailySummaryEnabled").toString()));
+        }
+        if (body.containsKey("dailySummaryHour")) {
+            user.setDailySummaryHour(
+                    Integer.parseInt(body.get("dailySummaryHour").toString()));
+        }
+        if (body.containsKey("emailNotificationsEnabled") || body.containsKey("aiTone")) {
+            java.util.Map<String, String> prefs = user.getPreferences();
+            if (prefs == null) prefs = new java.util.HashMap<>();
+            if (body.containsKey("emailNotificationsEnabled")) {
+                prefs.put("emailNotificationsEnabled", body.get("emailNotificationsEnabled").toString());
+            }
+            if (body.containsKey("aiTone")) {
+                prefs.put("aiTone", body.get("aiTone").toString());
+            }
+            user.setPreferences(prefs);
+        }
+
+        User saved = userRepository.save(user);
+        return ResponseEntity.ok(ApiResponse.success("Preferences updated", saved));
+    }
+
+    /**
      * Enables or disables accountability mode and optionally sets a partner.
      *
      * Body: { "enabled": true/false, "partnerId": "user-id-or-null" }

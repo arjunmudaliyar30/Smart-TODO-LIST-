@@ -5,6 +5,7 @@ import com.yourapp.dto.WorkoutScheduleRequest;
 import com.yourapp.model.User;
 import com.yourapp.model.WorkoutSchedule;
 import com.yourapp.service.WorkoutScheduleService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -46,7 +47,7 @@ public class WorkoutScheduleController {
     @PutMapping
     public ResponseEntity<ApiResponse<WorkoutSchedule>> saveSchedule(
             @AuthenticationPrincipal User user,
-            @RequestBody WorkoutScheduleRequest req) {
+            @Valid @RequestBody WorkoutScheduleRequest req) {
         WorkoutSchedule saved = scheduleService.saveSchedule(user.getId(), req);
         return ResponseEntity.ok(ApiResponse.success(saved));
     }

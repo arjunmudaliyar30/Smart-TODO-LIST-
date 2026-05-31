@@ -9,6 +9,7 @@ import com.yourapp.model.DailyNote;
 import com.yourapp.model.DailyNoteShare;
 import com.yourapp.model.User;
 import com.yourapp.service.DailyNoteService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -29,9 +30,19 @@ public class DailyNoteController {
     @PostMapping
     public ResponseEntity<ApiResponse<DailyNote>> createOrUpdate(
             @AuthenticationPrincipal User user,
-            @RequestBody DailyNoteRequest req) {
+            @Valid @RequestBody DailyNoteRequest req) {
 
         DailyNote note = noteService.createOrUpdateNote(user.getId(), req);
+        return ResponseEntity.ok(ApiResponse.success(note));
+    }
+
+    /** POST /api/notes/new — always insert a fresh note (allows multiple notes per day). */
+    @PostMapping("/new")
+    public ResponseEntity<ApiResponse<DailyNote>> createFresh(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody DailyNoteRequest req) {
+
+        DailyNote note = noteService.createFreshNote(user.getId(), req);
         return ResponseEntity.ok(ApiResponse.success(note));
     }
 
@@ -76,7 +87,7 @@ public class DailyNoteController {
     @PatchMapping("/autosave")
     public ResponseEntity<ApiResponse<DailyNote>> autoSave(
             @AuthenticationPrincipal User user,
-            @RequestBody AutoSaveRequest req) {
+            @Valid @RequestBody AutoSaveRequest req) {
 
         DailyNote note = noteService.autoSave(user.getId(), req);
         return ResponseEntity.ok(ApiResponse.success(note));
@@ -105,7 +116,7 @@ public class DailyNoteController {
     public ResponseEntity<ApiResponse<DailyNoteShare>> share(
             @AuthenticationPrincipal User user,
             @PathVariable String id,
-            @RequestBody ShareNoteRequest req) {
+            @Valid @RequestBody ShareNoteRequest req) {
 
         DailyNoteShare share = noteService.shareNote(id, user.getId(), req);
         return ResponseEntity.ok(ApiResponse.success(share));
@@ -130,5 +141,18 @@ public class DailyNoteController {
 
         noteService.softDelete(id, user.getId());
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    /**
+     * PATCH /api/notes/{id} — partial update of title, color, pinned, content.
+     */
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<DailyNoteResponseDTO>> patch(
+            @AuthenticationPrincipal User user,
+            @PathVariable String id,
+            @Valid @RequestBody DailyNoteRequest req) {
+
+        DailyNoteResponseDTO dto = noteService.patchNote(id, user.getId(), req);
+        return ResponseEntity.ok(ApiResponse.success(dto));
     }
 }

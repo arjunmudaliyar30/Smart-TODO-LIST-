@@ -62,6 +62,27 @@
 
   <script src="js/auth.js"></script>
   <script>
+    // ── Register Service Worker for auto-updates ──
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => {
+          console.log('[SW] Registered:', reg.scope);
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('[SW] New version - reloading');
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  setTimeout(() => window.location.reload(), 1000);
+                }
+              });
+            }
+          });
+        })
+        .catch(err => console.warn('[SW] Registration failed:', err));
+    }
+
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('registerBtn');

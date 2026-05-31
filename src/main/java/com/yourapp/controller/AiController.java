@@ -65,4 +65,18 @@ public class AiController {
         String summary = aiService.generateDailySummary(user.getId(), user.getFullName());
         return ResponseEntity.ok(ApiResponse.success(summary));
     }
+
+    /**
+     * Quick 1-2 sentence AI tip for a given context.
+     * POST /api/ai/suggest  { "context": "..." }
+     */
+    @PostMapping("/suggest")
+    public ResponseEntity<ApiResponse<String>> quickSuggest(
+            @AuthenticationPrincipal User user,
+            @RequestBody java.util.Map<String, String> body) throws IOException {
+
+        String context = body.getOrDefault("context", "");
+        String tip = aiService.quickSuggest(context);
+        return ResponseEntity.ok(ApiResponse.success(tip));
+    }
 }

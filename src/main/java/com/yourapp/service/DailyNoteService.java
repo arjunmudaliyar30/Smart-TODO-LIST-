@@ -53,10 +53,13 @@ public class DailyNoteService {
 
         if (existing.isPresent()) {
             DailyNote note = existing.get();
+            if (req.getTitle()       != null) note.setTitle(req.getTitle());
             if (req.getContent()     != null) note.setContent(req.getContent());
             if (req.getMood()        != null) note.setMood(req.getMood());
             if (req.getEnergyLevel() != null) note.setEnergyLevel(req.getEnergyLevel());
             if (req.getSleepHours()  != null) note.setSleepHours(req.getSleepHours());
+            if (req.getColor()       != null) note.setColor(req.getColor());
+            if (req.getPinned()      != null) note.setPinned(req.getPinned());
             note.setUpdatedAt(LocalDateTime.now());
             DailyNote saved = noteRepo.save(note);
             eventPublisher.publishEvent(new NoteWrittenEvent(this, userId, saved.getId(), date));
@@ -65,16 +68,43 @@ public class DailyNoteService {
             DailyNote note = DailyNote.builder()
                     .userId(userId)
                     .date(date)
+                    .title(req.getTitle())
                     .content(req.getContent())
                     .mood(req.getMood())
                     .energyLevel(req.getEnergyLevel())
                     .sleepHours(req.getSleepHours())
+                    .color(req.getColor() != null ? req.getColor() : "default")
+                    .pinned(req.getPinned() != null ? req.getPinned() : false)
                     .createdAt(LocalDateTime.now())
                     .build();
             DailyNote saved = noteRepo.save(note);
             eventPublisher.publishEvent(new NoteWrittenEvent(this, userId, saved.getId(), date));
             return saved;
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // CREATE FRESH (always inserts — allows multiple notes per day)
+    // -----------------------------------------------------------------------
+
+    @Transactional
+    public DailyNote createFreshNote(String userId, DailyNoteRequest req) {
+        LocalDate date = req.getDate() != null ? req.getDate() : LocalDate.now();
+        DailyNote note = DailyNote.builder()
+                .userId(userId)
+                .date(date)
+                .title(req.getTitle())
+                .content(req.getContent())
+                .mood(req.getMood())
+                .energyLevel(req.getEnergyLevel())
+                .sleepHours(req.getSleepHours())
+                .color(req.getColor() != null ? req.getColor() : "default")
+                .pinned(req.getPinned() != null ? req.getPinned() : false)
+                .createdAt(LocalDateTime.now())
+                .build();
+        DailyNote saved = noteRepo.save(note);
+        eventPublisher.publishEvent(new NoteWrittenEvent(this, userId, saved.getId(), date));
+        return saved;
     }
 
     // -----------------------------------------------------------------------
@@ -139,6 +169,26 @@ public class DailyNoteService {
     }
 
     // -----------------------------------------------------------------------
+    // PATCH NOTE (partial update by ID)
+    // -----------------------------------------------------------------------
+
+    @Transactional
+    @SuppressWarnings("null")
+    public DailyNoteResponseDTO patchNote(String noteId, String userId, DailyNoteRequest req) {
+        DailyNote note = noteRepo.findById(noteId)
+                .filter(n -> n.getUserId().equals(userId) && !n.isDeleted())
+                .orElseThrow(() -> new RuntimeException("Note not found"));
+        if (req.getTitle()   != null) note.setTitle(req.getTitle());
+        if (req.getContent() != null) note.setContent(req.getContent());
+        if (req.getColor()   != null) note.setColor(req.getColor());
+        if (req.getPinned()  != null) note.setPinned(req.getPinned());
+        if (req.getMood()    != null) note.setMood(req.getMood());
+        note.setUpdatedAt(java.time.LocalDateTime.now());
+        DailyNote saved = noteRepo.save(note);
+        return buildResponse(saved, true, null);
+    }
+
+    // -----------------------------------------------------------------------
     // SEARCH
     // -----------------------------------------------------------------------
 
@@ -148,8 +198,8 @@ public class DailyNoteService {
         if (keyword != null && !keyword.isBlank()) {
             owned = noteRepo.searchByContent(userId, keyword);
         } else {
-            LocalDate s = startDate != null ? startDate : LocalDate.now().minusMonths(3);
-            LocalDate e = endDate   != null ? endDate   : LocalDate.now();
+            LocalDate s = startDate != null ? startDate : LocalDate.now().minusYears(5);
+            LocalDate e = endDate   != null ? endDate   : LocalDate.now().plusDays(2);
             owned = noteRepo.findByUserIdAndDeletedFalseAndDateBetweenOrderByDateDesc(userId, s, e);
         }
 
@@ -277,10 +327,14 @@ public class DailyNoteService {
         return DailyNoteResponseDTO.builder()
                 .id(note.getId())
                 .date(note.getDate())
+                .title(note.getTitle())
                 .content(note.getContent())
+                .color(note.getColor() != null ? note.getColor() : "default")
+                .pinned(note.isPinned())
                 .mood(note.getMood())
                 .isOwner(isOwner)
                 .permissionType(perm)
+                .updatedAt(note.getUpdatedAt() != null ? note.getUpdatedAt() : note.getCreatedAt())
                 .tasksCompletedToday(tasksDone)
                 .workoutsCompletedToday(workoutsDone)
                 .caloriesNetToday(caloriesNet)

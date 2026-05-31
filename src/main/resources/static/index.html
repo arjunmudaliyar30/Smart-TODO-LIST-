@@ -224,7 +224,28 @@
 
   <script src="js/api.js"></script>
   <script>
-    (async function () {
+    (async function () {      // ── Register Service Worker ──
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js');
+          console.log('[SW] Registered:', registration.scope);
+          // Check for updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('[SW] New version available - reload to update');
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  setTimeout(() => window.location.reload(), 1000);
+                }
+              });
+            }
+          });
+        } catch (err) {
+          console.warn('[SW] Registration failed:', err);
+        }
+      }
       const MIN_MS    = 1800; // minimum splash presence
       const AUTO_MS   = 8000; // auto-navigate if user doesn’t tap
       const started   = Date.now();
@@ -286,7 +307,7 @@
       // Authenticated — show personalised splash
       try {
         const [healthRes] = await Promise.all([
-          fetch('/api/health', { headers: { 'Authorization': 'Bearer ' + token } }),
+          fetch('/health', { headers: { 'Authorization': 'Bearer ' + token } }),
           loadStreakLine(token)
         ]);
         if (healthRes.ok) {

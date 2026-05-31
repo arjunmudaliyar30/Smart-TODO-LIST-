@@ -16,6 +16,138 @@ function toggleTheme() {
   if (btn) btn.textContent = isLight ? '\uD83C\uDF19' : '\uD83C\uDF1E';
 }
 
+// ---- Settings ----
+function openSettings() {
+  // Load current preferences from profile
+  apiGet('/api/users/me').then(function(res) {
+    if (!res || !res.data) return;
+    var u = res.data;
+    var hr = (u.dailySummaryHour != null ? u.dailySummaryHour : 8);
+    var hh = String(hr).padStart(2, '0');
+    var el_time = document.getElementById('settDailySummaryTime');
+    if (el_time) el_time.value = hh + ':00';
+    var el_push = document.getElementById('settPushEnabled');
+    if (el_push) el_push.checked = !!u.pushNotificationsEnabled;
+    var el_email = document.getElementById('settEmailEnabled');
+    var emailEnabled = u.preferences && u.preferences.emailNotificationsEnabled === 'true';
+    if (el_email) el_email.checked = emailEnabled;
+    var el_tone = document.getElementById('settAiTone');
+    if (el_tone) el_tone.value = (u.preferences && u.preferences.aiTone) ? u.preferences.aiTone : 'friendly';
+    // Morning alarm
+    var el_alarmTime = document.getElementById('settMorningAlarm');
+    if (el_alarmTime) el_alarmTime.value = (u.preferences && u.preferences.morningAlarmTime) ? u.preferences.morningAlarmTime : '07:00';
+    var el_alarmEnabled = document.getElementById('settMorningAlarmEnabled');
+    if (el_alarmEnabled) el_alarmEnabled.checked = !!(u.preferences && u.preferences.morningAlarmEnabled === 'true');
+    // Profile display
+    var nameEl = document.getElementById('settProfileName');
+    var emailEl = document.getElementById('settProfileEmail');
+    var initialEl = document.getElementById('settProfileInitial');
+    var fn = u.fullName || localStorage.getItem('fullName') || 'User';
+    if (nameEl) nameEl.textContent = fn;
+    if (emailEl) emailEl.textContent = u.email || '';
+    if (initialEl) {
+      var parts = fn.trim().split(/\s+/);
+      var initials = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0][0];
+      initialEl.textContent = initials.toUpperCase();
+    }
+  }).catch(function() {
+    // Fallback from localStorage if API fails
+    var fn = localStorage.getItem('fullName') || 'User';
+    var nameEl = document.getElementById('settProfileName');
+    var initialEl = document.getElementById('settProfileInitial');
+    if (nameEl) nameEl.textContent = fn;
+    if (initialEl) {
+      var parts = fn.trim().split(/\s+/);
+      var initials = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0][0];
+      initialEl.textContent = initials.toUpperCase();
+    }
+  });
+  openModal('settingsModal');
+}
+
+async function checkForUpdates() {
+  if (!('serviceWorker' in navigator)) {
+    location.reload(true);
+    return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) { location.reload(true); return; }
+    await reg.update();
+    if (reg.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      toast('Update ready! Reloading…', 'success');
+      setTimeout(() => location.reload(true), 1200);
+    } else if (reg.installing) {
+      toast('Downloading update…', 'success');
+      reg.installing.addEventListener('statechange', function() {
+        if (this.state === 'installed') {
+          this.postMessage({ type: 'SKIP_WAITING' });
+          setTimeout(() => location.reload(true), 800);
+        }
+      });
+    } else {
+      toast('App is already up to date ✅', 'success');
+    }
+  } catch (e) {
+    location.reload(true);
+  }
+}
+
+async function saveSettings() {
+  var timeVal = document.getElementById('settDailySummaryTime')?.value || '08:00';
+  var hourStr = timeVal.split(':')[0];
+  var dailySummaryHour = parseInt(hourStr, 10) || 8;
+  var pushEnabled  = !!document.getElementById('settPushEnabled')?.checked;
+  var emailEnabled = !!document.getElementById('settEmailEnabled')?.checked;
+  var aiTone = document.getElementById('settAiTone')?.value || 'friendly';
+  var morningAlarmTime = document.getElementById('settMorningAlarm')?.value || '07:00';
+  var morningAlarmEnabled = !!document.getElementById('settMorningAlarmEnabled')?.checked;
+  try {
+    await apiPatch('/api/users/me/preferences', {
+      pushNotificationsEnabled: pushEnabled,
+      dailySummaryEnabled: true,
+      dailySummaryHour: dailySummaryHour,
+      emailNotificationsEnabled: emailEnabled,
+      aiTone: aiTone,
+      morningAlarmTime: morningAlarmTime,
+      morningAlarmEnabled: String(morningAlarmEnabled)
+    });
+    // Schedule tomorrow's morning alarm if enabled
+    if (morningAlarmEnabled) {
+      var [alarmHr, alarmMin] = morningAlarmTime.split(':').map(Number);
+      var tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(alarmHr, alarmMin, 0, 0);
+      var pad = n => String(n).padStart(2,'0');
+      var d = tomorrow;
+      var iso = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes())+':00';
+      apiPost('/api/alarms', { title: '⏰ Morning Alarm', scheduledAt: iso }).catch(function(){});
+    }
+    toast('Settings saved ✅', 'success');
+    closeModal('settingsModal');
+  } catch (err) {
+    toast(err.message || 'Failed to save settings', 'error');
+  }
+}
+
+function shareApp() {
+  var shareData = {
+    title: 'FORGE – Smart TODO & Fitness Tracker',
+    text: 'Check out FORGE, an AI-powered productivity app!',
+    url: window.location.origin
+  };
+  if (navigator.share) {
+    navigator.share(shareData).catch(function() {});
+  } else {
+    navigator.clipboard?.writeText(window.location.origin).then(function() {
+      toast('App link copied to clipboard!', 'success');
+    }).catch(function() {
+      toast('Share: ' + window.location.origin, 'info');
+    });
+  }
+}
+
 // Apply correct icon on load
 window.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('themeToggleBtn');
@@ -105,14 +237,65 @@ function arrayBufferToBase64Url(buffer) {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
+// ---- Service Worker Registration & Auto-Update ----
+async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    console.log('[SW] Registered:', registration.scope);
+    
+    // Check for updates every 5 minutes
+    setInterval(() => registration.update(), 5 * 60 * 1000);
+    
+    // Listen for new service worker waiting to activate
+    registration.addEventListener('updatefound', () => {
+      const newWorker = registration.installing;
+      if (!newWorker) return;
+      
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // New version available!
+          console.log('[SW] New version detected');
+          showUpdateNotification(registration);
+        }
+      });
+    });
+    
+    // If there's already a waiting SW, show notification immediately
+    if (registration.waiting) {
+      showUpdateNotification(registration);
+    }
+  } catch (err) {
+    console.warn('[SW] Registration failed:', err);
+  }
+}
+
+function showUpdateNotification(registration) {
+  // Auto-reload after 3 seconds to apply update
+  toast('New version available! Reloading in 3 seconds...', 'info');
+  setTimeout(() => {
+    registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
+    window.location.reload();
+  }, 3000);
+}
+
+// Reload when new service worker takes control
+navigator.serviceWorker?.addEventListener('controllerchange', () => {
+  window.location.reload();
+});
+
 // Kick off push subscription once page is ready
-window.addEventListener('load', () => initPushNotifications());
+window.addEventListener('load', () => {
+  registerServiceWorker();
+  initPushNotifications();
+});
 
 
 // ---- State ----
 let activeChatSessionId = null;
 let allTasks = [];
 let allGoals = [];
+let _taskTab = 'all';
 
 // ---- Notes state (declared here to avoid TDZ when accessed before line 2300+) ----
 let _noteCurrentDate   = null;
@@ -175,13 +358,14 @@ document.querySelectorAll('.nav-item').forEach(link => {
     // Hide fitness FAB when leaving fitness tab
     hideFitFab();
 
-    if (tab === 'tasks')    loadTasks();
-    if (tab === 'goals')    loadGoals();
-    if (tab === 'workouts') initFitnessTab();
-    if (tab === 'files')    loadFiles();
-    if (tab === 'notes')    initNotesTab();
-    if (tab === 'collab')   loadCollabSection();
-    if (tab === 'people')   { loadConversations(); refreshUnreadBadge(); }
+    if (tab === 'tasks')      loadTasks();
+    if (tab === 'goals')      loadGoals();
+    if (tab === 'workouts')   initFitnessTab();
+    if (tab === 'files')      loadFiles();
+    if (tab === 'notes')      initNotesTab();
+    if (tab === 'collab')     loadCollabSection();
+    if (tab === 'people')     { loadConversations(); refreshUnreadBadge(); }
+    if (tab === 'braincoach') initBrainCoachTab();
   });
 });
 
@@ -212,7 +396,21 @@ document.querySelectorAll('.modal-close, [data-modal]').forEach(btn => {
     if (modalId) document.getElementById(modalId).classList.add('hidden');
   });
 });
-function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// ---- Empty State Helper ----
+function emptyStateHTML(icon, title, message, btnLabel, btnOnclick) {
+  const btn = btnLabel
+    ? `<button class="btn-primary" style="margin-top:1rem" onclick="${btnOnclick}">${btnLabel}</button>`
+    : '';
+  return `<div style="text-align:center;padding:2.5rem 1rem;color:var(--text-muted)">
+    <div style="font-size:3rem;margin-bottom:0.5rem">${icon}</div>
+    <div style="font-size:1rem;font-weight:600;color:var(--text-primary);margin-bottom:0.25rem">${title}</div>
+    <div style="font-size:0.85rem">${message}</div>
+    ${btn}
+  </div>`;
+}
 
 // ==========================================================================
 // AI FAB + OVERLAY
@@ -334,6 +532,18 @@ async function sendChat() {
       toast(`📌 Task scheduled: "${aiData.taskCreated.title}"`, 'success');
       loadTasks();
     }
+    if (aiData && aiData.tasksCreated && aiData.tasksCreated.length) {
+      const names = aiData.tasksCreated.map(t => `"${t.title}"`).join(', ');
+      toast(`📌 ${aiData.tasksCreated.length} tasks created: ${names}`, 'success');
+      // Also show a summary bubble in chat
+      const summaryBubble = document.createElement('div');
+      summaryBubble.className = 'chat-bubble assistant';
+      summaryBubble.innerHTML = `✅ <strong>${aiData.tasksCreated.length} tasks scheduled:</strong><br>` +
+        aiData.tasksCreated.map(t => `• ${t.title}${t.dueDate ? ' <span style="color:#a0a0c0;font-size:0.8em">(' + new Date(t.dueDate).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) + ')</span>' : ''}`).join('<br>');
+      win.appendChild(summaryBubble);
+      win.scrollTop = win.scrollHeight;
+      loadTasks();
+    }
     if (aiData && aiData.goalCreated) {
       toast(`🎯 Goal added: "${aiData.goalCreated.title}"`, 'success');
       loadGoals();
@@ -413,18 +623,50 @@ document.getElementById('addCategoryBtn').addEventListener('click', async () => 
   } catch (err) { toast(err.message, 'error'); }
 });
 
+function _todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function setTaskTab(tab) {
+  _taskTab = tab;
+  document.querySelectorAll('#taskTabBar .task-tab').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  renderTasks(getFilteredTasks());
+}
+
+function updateTaskTabBadges() {
+  var today = _todayStr();
+  var todayCount  = allTasks.filter(function(t) {
+    var notDone = t.status !== 'DONE' && t.status !== 'COMPLETED';
+    return notDone && (t.recurring === true || (t.dueDate && t.dueDate.slice(0,10) === today));
+  }).length;
+  var dailyCount  = allTasks.filter(function(t) { return t.recurring === true; }).length;
+  var allCount    = allTasks.length;
+  var collabCount = allTasks.filter(function(t) { return t.collaboratorIds && t.collaboratorIds.length > 0; }).length;
+  var el;
+  el = document.getElementById('badge-today');  if (el) el.textContent = todayCount;
+  el = document.getElementById('badge-daily');  if (el) el.textContent = dailyCount;
+  el = document.getElementById('badge-all');    if (el) el.textContent = allCount;
+  el = document.getElementById('badge-collab'); if (el) el.textContent = collabCount;
+}
+
 function getFilteredTasks() {
-  const status  = document.getElementById('taskStatusFilter').value;
-  const section = document.getElementById('taskSectionFilter').value;
-  const query   = (document.getElementById('taskSearchInput').value || '').trim().toLowerCase();
+  const query = (document.getElementById('taskSearchInput').value || '').trim().toLowerCase();
+  var today = _todayStr();
   let tasks = allTasks;
-  if (status)  tasks = tasks.filter(t => t.status === status);
-  if (section === '__DAILY__') {
-    tasks = tasks.filter(t => t.recurring === true);
-  } else if (section) {
-    tasks = tasks.filter(t =>
-      ((t.section && t.section.trim()) ? t.section.trim() : 'General') === section);
+  if (_taskTab === 'today') {
+    tasks = tasks.filter(function(t) {
+      var notDone = t.status !== 'DONE' && t.status !== 'COMPLETED';
+      var dueToday = t.dueDate && t.dueDate.slice(0,10) === today;
+      return notDone && (t.recurring === true || dueToday);
+    });
+  } else if (_taskTab === 'daily') {
+    tasks = tasks.filter(function(t) { return t.recurring === true; });
+  } else if (_taskTab === 'collab') {
+    tasks = tasks.filter(function(t) { return t.collaboratorIds && t.collaboratorIds.length > 0; });
   }
+  // 'all' shows everything
   if (query) {
     tasks = tasks.filter(t =>
       (t.title || '').toLowerCase().includes(query) ||
@@ -503,6 +745,7 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
     } else {
       await apiPost('/api/tasks', payload);
       toast('Task created!');
+      aiSuggest(`New task created: "${payload.title}". Give a quick productivity tip.`);
     }
     document.getElementById('taskModal').classList.add('hidden');
     document.getElementById('taskForm').reset();
@@ -533,6 +776,7 @@ async function loadTasks() {
     const res = await apiGet('/api/tasks');
     allTasks = res.data || [];
     populateSectionFilter();
+    updateTaskTabBadges();
     renderTasks(getFilteredTasks());
   } catch (err) { toast(err.message, 'error'); }
 }
@@ -542,7 +786,7 @@ const PRIORITY_ORDER = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 function renderTasks(tasks) {
   const el = document.getElementById('taskList');
   if (!tasks.length) {
-    el.innerHTML = '<p class="loading">No tasks yet. Create your first one!</p>';
+    el.innerHTML = emptyStateHTML('📋', 'No tasks yet', 'Stay productive — add your first task to get started!', '+ New Task', "document.getElementById('openTaskModal').click()");
     return;
   }
 
@@ -554,8 +798,12 @@ function renderTasks(tasks) {
     groups[sec].push(t);
   });
 
-  // Sort tasks within each section: URGENT → HIGH → MEDIUM → LOW, then by title
+  // Sort tasks within each section: active before done, then URGENT→HIGH→MEDIUM→LOW, then title
+  const STATUS_SORT = { PENDING: 0, IN_PROGRESS: 1, DONE: 2, COMPLETED: 2, CANCELLED: 3 };
   Object.values(groups).forEach(arr => arr.sort((a, b) => {
+    const sa = STATUS_SORT[a.status] ?? 0;
+    const sb = STATUS_SORT[b.status] ?? 0;
+    if (sa !== sb) return sa - sb;
     const pa = PRIORITY_ORDER[a.priority] ?? 4;
     const pb = PRIORITY_ORDER[b.priority] ?? 4;
     return pa !== pb ? pa - pb : (a.title || '').localeCompare(b.title || '');
@@ -699,6 +947,7 @@ document.getElementById('goalForm').addEventListener('submit', async e => {
     } else {
       await apiPost('/api/goals', payload);
       toast('Goal created!');
+      aiSuggest(`New goal set: "${payload.title}". Give a short motivational tip for achieving it.`);
     }
     document.getElementById('goalModal').classList.add('hidden');
     document.getElementById('goalForm').reset();
@@ -720,7 +969,7 @@ async function loadGoals() {
 
 function renderGoals(goals) {
   const el = document.getElementById('goalList');
-  if (!goals.length) { el.innerHTML = '<p class="loading">No goals yet. Create your first one!</p>'; return; }
+  if (!goals.length) { el.innerHTML = emptyStateHTML('🎯', 'No goals yet', 'Set a goal and track your progress over time.', '+ New Goal', "openModal('goalModal')"); return; }
 
   el.innerHTML = goals.map(g => `
     <div class="card">
@@ -1120,7 +1369,7 @@ async function loadActiveWorkouts() {
     const countEl  = el('activeWorkoutsCount');
     if (countEl) countEl.textContent = _activeWorkouts.length;
     if (!_activeWorkouts.length) {
-      listEl.innerHTML = '<p class="loading">No active workouts yet. Tap "+ Add Workout" to begin! 💪</p>';
+      listEl.innerHTML = emptyStateHTML('💪', 'No active workouts', 'Start a workout routine and track your fitness journey!', '+ Add Workout', 'createNewWorkout()');
       return;
     }
     listEl.innerHTML = _activeWorkouts.map(w => renderWorkoutCard(w)).join('');
@@ -2005,26 +2254,54 @@ async function loadConversations() {
 function renderConversations(convs) {
   const el = document.getElementById('conversationsList');
   if (!convs.length) { el.innerHTML = '<p class="loading">No conversations yet. Search for a user above to start chatting.</p>'; return; }
-  el.innerHTML = convs.map(c => `
+  el.innerHTML = convs.map(c => {
+    const initials = (c.peerName || '?').charAt(0).toUpperCase();
+    const colorCode = c.peerId ? (c.peerId.charCodeAt(0) % 6) : 0;
+    const avatarGrads = [
+      'linear-gradient(135deg,#6c63ff,#a78bfa)',
+      'linear-gradient(135deg,#10b981,#34d399)',
+      'linear-gradient(135deg,#f59e0b,#fbbf24)',
+      'linear-gradient(135deg,#ef4444,#f87171)',
+      'linear-gradient(135deg,#3b82f6,#60a5fa)',
+      'linear-gradient(135deg,#ec4899,#f9a8d4)'
+    ];
+    return `
     <div class="conversation-item" onclick="openThread('${esc(c.peerId)}','${esc(c.peerName)}')">
-      <div>
+      <div class="convo-avatar" style="background:${avatarGrads[colorCode]}">${initials}</div>
+      <div class="convo-info">
         <div class="conversation-peer">${esc(c.peerName)}</div>
         <div class="conversation-last">${esc(c.lastMessage || '')}</div>
       </div>
       ${c.unread > 0 ? `<span class="conversation-unread">${c.unread}</span>` : ''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function openThread(peerId, peerName) {
   currentPeerId   = peerId;
   currentPeerName = peerName;
   document.getElementById('chatThreadTitle').textContent = peerName;
-  document.getElementById('userSearchResults').classList.add('hidden');
-  document.getElementById('conversationsList').classList.add('hidden');
+  // Set avatar initials
+  var avatar = document.getElementById('chatPeerAvatar');
+  if (avatar) avatar.textContent = (peerName || '?').charAt(0).toUpperCase();
+  // Hide all conversations-view elements
+  ['peoplePageHeader','peopleSearchBar','userSearchResults','convSectionLabel','conversationsList'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  // Hide FAB so it doesn't float over chat
+  var fab = document.getElementById('forgeFabWrap');
+  if (fab) fab.style.display = 'none';
+  // Show thread
   document.getElementById('chatThread').classList.remove('hidden');
   await refreshThread();
   if (threadPollTimer) clearInterval(threadPollTimer);
   threadPollTimer = setInterval(refreshThread, 5000);
+  // Scroll page to top (no scrollIntoView to avoid page jumping)
+  var mainContent = document.querySelector('.main-content');
+  if (mainContent) mainContent.scrollTop = 0;
+  // Scroll messages to bottom
+  var msgs = document.getElementById('threadMessages');
+  if (msgs) msgs.scrollTop = msgs.scrollHeight;
 }
 
 async function refreshThread() {
@@ -2056,7 +2333,13 @@ function closeThread() {
   currentPeerId   = null;
   currentPeerName = null;
   document.getElementById('chatThread').classList.add('hidden');
-  document.getElementById('conversationsList').classList.remove('hidden');
+  // Restore conversations-view elements
+  ['peoplePageHeader','peopleSearchBar','convSectionLabel','conversationsList'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.style.display = '';
+  });
+  // Restore FAB
+  var fab = document.getElementById('forgeFabWrap');
+  if (fab) fab.style.display = '';
   loadConversations();
 }
 
@@ -2133,9 +2416,13 @@ document.addEventListener('click', e => {
     target.style.display = 'block';
   }
   // Lazy loads
-  if (itab === 'fitMain')       { initFitnessTab(); }
-  if (itab === 'fitCategories') loadFitnessCategories();
-  if (itab === 'fitCalendar')   { hideFitFab(); initFitCalendar(); }
+  if (itab === 'fitMain')         { initFitnessTab(); }
+  if (itab === 'fitCategories')   loadFitnessCategories();
+  if (itab === 'fitCalendar')     { hideFitFab(); initFitCalendar(); }
+  if (itab === 'sessionTracker')  { hideFitFab(); loadSessions(); }
+  if (itab === 'photoGallery')    { hideFitFab(); loadProgressPhotos(); }
+  if (itab === 'brainChallenges') loadChallenges();
+  if (itab === 'brainDecisions')  loadDecisionLogs();
   if (itab === 'collabTasks')   loadCollabTasks();
   if (itab === 'collabGoals')    loadCollabGoals();
   if (itab === 'collabFiles')    loadCollabFiles();
@@ -2245,6 +2532,8 @@ async function loadCollabTasks() {
           </div>
           <div style="padding:0.25rem 0.5rem 0.35rem;display:flex;gap:0.4rem;flex-wrap:wrap">
             <button class="btn-primary btn-xs" onclick="openProgressModal('${t.id}',${pct != null ? pct : 0},'${safeNote}')">📊 My Progress</button>
+            <button class="btn-secondary btn-xs" onclick="openCollabDiscuss('${t.id}','${t.userId}')">💬 Discuss</button>
+            <button class="btn-secondary btn-xs" style="color:#ef4444;border-color:#ef4444" onclick="leaveCollab('${t.id}')">🚪 Leave</button>
           </div>
         </div>`;
       }).join('');
@@ -2294,6 +2583,42 @@ async function collabCycleTaskStatus(id, current) {
     loadCollabTasks(); // refresh the list
   } catch (err) { toast(err.message || 'Failed to update status', 'error'); }
 }
+
+/**
+ * Switch to the People tab and open a chat thread with the task owner.
+ * @param {string} taskId - not used directly, kept for future reference
+ * @param {string} ownerId - the userId of the task owner
+ */
+async function openCollabDiscuss(taskId, ownerId) {
+  // Navigate to People tab
+  document.querySelectorAll('.nav-item').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  const peopleNav = document.querySelector('.nav-item[data-tab="people"]');
+  if (peopleNav) peopleNav.classList.add('active');
+  const peopleTab = document.getElementById('tab-people');
+  if (peopleTab) peopleTab.classList.add('active');
+  // Resolve the owner's name then open thread
+  try {
+    const r = await apiGet(`/api/users/${ownerId}/public`);
+    const name = (r.data && r.data.name) ? r.data.name : (r.data && r.data.email ? r.data.email : 'Task Owner');
+    openThread(ownerId, name);
+  } catch (_) {
+    openThread(ownerId, 'Task Owner');
+  }
+}
+
+/**
+ * Remove the current user from a shared task's collaborator list.
+ */
+async function leaveCollab(taskId) {
+  if (!confirm('Leave this shared task? You will no longer see it in your Collab list.')) return;
+  try {
+    await apiDelete(`/api/tasks/${taskId}/leave`);
+    toast('You have left the task', 'success');
+    loadCollabTasks();
+  } catch (err) { toast(err.message || 'Failed to leave task', 'error'); }
+}
+
 
 async function loadCollabGoals() {
   const el = document.getElementById('collabGoalList');
@@ -2597,194 +2922,206 @@ document.getElementById('calDayPopup').addEventListener('click', e => {
 });
 
 // ==========================================================================
-// DAILY NOTES
+// DAILY NOTES  (card-grid redesign)
 // ==========================================================================
 
-function initNotesTab() {
-  if (!_noteCurrentDate) _noteCurrentDate = _localDateStr(new Date());
-  renderNoteDateNav();
-  loadNoteForDate(_noteCurrentDate);
-}
+let _currentNoteColor = 'default';
+let _noteViewId       = null;
+let _noteViewPinned   = false;
 
-function renderNoteDateNav() {
-  const dateEl  = el('noteCurrentDate');
-  if (!dateEl) return;
-  const d       = new Date(_noteCurrentDate + 'T00:00:00');
-  const todayStr = _localDateStr(new Date());
-  const isToday  = _noteCurrentDate === todayStr;
-  const fmtOpts  = { weekday: 'long', month: 'long', day: 'numeric' };
-  if (!isToday) fmtOpts.year = 'numeric';
-  dateEl.textContent = (isToday ? 'Today — ' : '') + d.toLocaleDateString(undefined, fmtOpts);
-}
-
-/** Format a Date to YYYY-MM-DD using LOCAL timezone (not UTC) */
+/** Format a Date to YYYY-MM-DD using LOCAL timezone */
 function _localDateStr(d) {
   return d.getFullYear() + '-'
     + String(d.getMonth() + 1).padStart(2, '0') + '-'
     + String(d.getDate()).padStart(2, '0');
 }
 
-function noteDatePrev() {
-  clearTimeout(_noteAutoSaveTimer);
-  _noteAutoSaveTimer = null;
-  _noteData = null;
-  const d = new Date(_noteCurrentDate + 'T00:00:00');
-  d.setDate(d.getDate() - 1);
-  _noteCurrentDate = _localDateStr(d);
-  renderNoteDateNav();
-  loadNoteForDate(_noteCurrentDate);
+function initNotesTab() {
+  loadNoteCards();
 }
 
-function noteDateNext() {
-  clearTimeout(_noteAutoSaveTimer);
-  _noteAutoSaveTimer = null;
-  _noteData = null;
-  const d = new Date(_noteCurrentDate + 'T00:00:00');
-  d.setDate(d.getDate() + 1);
-  _noteCurrentDate = _localDateStr(d);
-  renderNoteDateNav();
-  loadNoteForDate(_noteCurrentDate);
+// ---------- Create card -------------------------------------------------------
+function openNewNote() {
+  el('noteCreateTitle').value   = '';
+  el('noteCreateContent').value = '';
+  _currentNoteColor = 'default';
+  document.querySelectorAll('.note-color-btn').forEach(b => b.classList.remove('selected'));
+  el('noteCreateModal').classList.remove('hidden');
+  setTimeout(() => el('noteCreateTitle').focus(), 80);
 }
 
-function noteTodayJump() {
-  clearTimeout(_noteAutoSaveTimer);
-  _noteAutoSaveTimer = null;
-  _noteData = null;
-  _noteCurrentDate = _localDateStr(new Date());
-  renderNoteDateNav();
-  loadNoteForDate(_noteCurrentDate);
+function closeNewNote() {
+  el('noteCreateModal').classList.add('hidden');
 }
 
-async function loadNoteForDate(dateStr) {
-  const areaEl  = el('noteContent');
-  const statsEl = el('noteStats');
-  if (areaEl) areaEl.value = '';
-  // Reset mood
-  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
+function setNoteColor(color) {
+  _currentNoteColor = color;
+  document.querySelectorAll('.note-color-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.color === color);
+  });
+}
+
+async function saveNewNote() {
+  const title   = el('noteCreateTitle').value.trim();
+  const content = el('noteCreateContent').value.trim();
+  if (!title && !content) { toast('Write something first', 'error'); return; }
+  const today   = _localDateStr(new Date());
   try {
-    const res  = await apiGet(`/api/notes?date=${dateStr}`);
-    _noteData  = res.data;
-    if (!_noteData) return;
-    if (areaEl) areaEl.value = _noteData.content || '';
-    if (_noteData.mood) {
-      document.querySelectorAll('.mood-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.mood === _noteData.mood);
-      });
-      // Also set the dropdown if present
-      if (el('noteMoodSelect')) el('noteMoodSelect').value = _noteData.mood || '';
-    }
-    if (el('noteEnergy')) el('noteEnergy').value = _noteData.energyLevel != null ? String(_noteData.energyLevel) : '';
-    if (el('noteSleep'))  el('noteSleep').value  = _noteData.sleepHours  != null ? String(_noteData.sleepHours)  : '';
-    if (statsEl) {
-      statsEl.innerHTML = `
-        <span>&#x2705; ${_noteData.tasksCompletedToday || 0} tasks done</span>
-        <span>&#x1F4AA; ${_noteData.workoutsCompletedToday || 0} workouts</span>
-        <span>&#x1F525; ${_noteData.caloriesNetToday || 0} kcal net</span>`;
-    }
-  } catch (_err) {
-    _noteData = null;
-  }
-}
-
-function onNoteInput() {
-  clearTimeout(_noteAutoSaveTimer);
-  _noteAutoSaveTimer = setTimeout(autoSaveNote, 1500);
-}
-
-async function autoSaveNote() {
-  const content     = el('noteContent')?.value || '';
-  const mood        = el('noteMoodSelect')?.value || document.querySelector('.mood-btn.active')?.dataset.mood || null;
-  const energyLevel = el('noteEnergy')?.value ? parseInt(el('noteEnergy').value) : null;
-  const sleepHours  = el('noteSleep')?.value  ? parseFloat(el('noteSleep').value)  : null;
-  const payload = { date: _noteCurrentDate, content };
-  if (mood)          payload.mood         = mood;
-  if (energyLevel)   payload.energyLevel  = energyLevel;
-  if (sleepHours)    payload.sleepHours   = sleepHours;
-  if (_noteData?.id) payload.noteId       = _noteData.id;
-  try {
-    const res  = await apiPatch('/api/notes/autosave', payload);
-    _noteData  = res.data;
-    const ind  = el('noteSaveIndicator');
-    if (ind) {
-      ind.textContent = '✓ Saved';
-      ind.style.opacity = '1';
-      setTimeout(() => { ind.style.opacity = '0'; }, 1600);
-    }
-  } catch (_) {}
-}
-
-async function saveNote() {
-  const content     = el('noteContent')?.value || '';
-  const mood        = el('noteMoodSelect')?.value || document.querySelector('.mood-btn.active')?.dataset.mood || null;
-  const energyLevel = el('noteEnergy')?.value ? parseInt(el('noteEnergy').value) : null;
-  const sleepHours  = el('noteSleep')?.value  ? parseFloat(el('noteSleep').value)  : null;
-  try {
-    const payload = { date: _noteCurrentDate, content };
-    if (mood)        payload.mood        = mood;
-    if (energyLevel) payload.energyLevel = energyLevel;
-    if (sleepHours)  payload.sleepHours  = sleepHours;
-    const res  = await apiPost('/api/notes', payload);
-    _noteData  = res.data;
+    await apiPost('/api/notes/new', { date: today, title: title || null, content, color: _currentNoteColor });
+    closeNewNote();
     toast('Note saved ✅', 'success');
+    loadNoteCards();
   } catch (err) { toast(err.message, 'error'); }
 }
 
-function setMood(mood) {
-  document.querySelectorAll('.mood-btn').forEach(b => b.classList.toggle('active', b.dataset.mood === mood));
-  clearTimeout(_noteAutoSaveTimer);
-  _noteAutoSaveTimer = setTimeout(autoSaveNote, 600);
+// ---------- Card grid ---------------------------------------------------------
+async function loadNoteCards() {
+  const grid = el('noteCardsGrid');
+  const hd   = el('notesSectionHd');
+  if (grid) grid.innerHTML = '<div class="loading">Loading notes…</div>';
+  try {
+    const kw  = el('noteSearchInput')?.value?.trim();
+    let url   = '/api/notes/search';
+    if (kw)   url += `?keyword=${encodeURIComponent(kw)}`;
+    const res  = await apiGet(url);
+    const notes = (res.data || []).sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      const aTs = a.updatedAt || a.date || '';
+      const bTs = b.updatedAt || b.date || '';
+      return bTs.localeCompare(aTs);
+    });
+    if (hd) hd.style.display = notes.length ? 'block' : 'none';
+    if (!notes.length) {
+      grid.innerHTML = '<p class="notes-empty">No notes yet. Hit <strong>+ New Note</strong> to start.</p>';
+      return;
+    }
+    grid.innerHTML = notes.map(renderNoteCard).join('');
+  } catch (err) {
+    if (grid) grid.innerHTML = `<p class="notes-empty">${esc(err.message)}</p>`;
+  }
 }
 
-async function deleteNote() {
-  if (!_noteData?.id) { toast('Nothing to delete', 'error'); return; }
-  if (!confirm('Delete this note? It cannot be recovered.')) return;
+function renderNoteCard(n) {
+  const title   = n.title ? esc(n.title) : esc(_fmtNoteDate(n.date));
+  const snippet = esc((n.content || '').slice(0, 140));
+  const ellipsis = (n.content || '').length > 140 ? '…' : '';
+  const bg      = n.color && n.color !== 'default' ? n.color : '';
+  const bgStyle = bg ? `style="background:${bg}"` : '';
+  const ts      = n.updatedAt ? _fmtNoteTs(n.updatedAt) : (n.date || '');
+  return `<div class="note-card${n.pinned ? ' note-pinned' : ''}" ${bgStyle} onclick="openNoteView('${n.id}')">
+    ${n.pinned ? '<span class="note-pin-icon">📌</span>' : ''}
+    <div class="note-card-title">${title}</div>
+    ${snippet ? `<div class="note-card-snippet">${snippet}${ellipsis}</div>` : ''}
+    <div class="note-card-ts">${esc(ts)}</div>
+  </div>`;
+}
+
+function _fmtNoteDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function _fmtNoteTs(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d)) return ts;
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ', ' +
+         d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
+// Search (inline, fires on input)
+function searchNotes() { loadNoteCards(); }
+
+// ---------- Note View Modal ---------------------------------------------------
+async function openNoteView(id) {
+  _noteViewId = id;
   try {
-    await apiDelete(`/api/notes/${_noteData.id}`);
-    _noteData = null;
-    const areaEl = el('noteContent');
-    if (areaEl) areaEl.value = '';
-    document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
-    const statsEl = el('noteStats');
-    if (statsEl) statsEl.innerHTML = '<span>&#x2705; 0 tasks done</span><span>&#x1F4AA; 0 workouts</span><span>&#x1F525; 0 kcal net</span>';
+    const res  = await apiGet(`/api/notes/${id}`);
+    const n    = res.data;
+    if (!n) return;
+    _noteViewPinned = n.pinned;
+    el('noteViewTitle').textContent  = n.title || _fmtNoteDate(n.date);
+    el('noteViewContent').innerHTML  = n.content
+      ? n.content.replace(/\n/g, '<br>') : '<em style="opacity:.5">Empty note</em>';
+    el('noteViewUpdated').textContent = n.updatedAt
+      ? 'Last updated ' + _fmtNoteTs(n.updatedAt) : '';
+    el('notePinBtn').textContent = n.pinned ? '📌 Unpin' : '📌 Pin';
+    // color the modal header if note has a color
+    const mc = document.querySelector('#noteViewModal .note-view-header');
+    if (mc) mc.style.background = (n.color && n.color !== 'default') ? n.color : '';
+    el('noteViewModal').classList.remove('hidden');
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+function closeNoteView() {
+  el('noteViewModal').classList.add('hidden');
+  _noteViewId = null;
+}
+
+async function toggleNotePin() {
+  if (!_noteViewId) return;
+  try {
+    await apiPatch(`/api/notes/${_noteViewId}`, { pinned: !_noteViewPinned });
+    closeNoteView();
+    loadNoteCards();
+    toast(_noteViewPinned ? 'Note unpinned' : 'Note pinned 📌', 'success');
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function deleteNoteFromView() {
+  if (!_noteViewId) return;
+  if (!confirm('Delete this note? This cannot be undone.')) return;
+  try {
+    await apiDelete(`/api/notes/${_noteViewId}`);
+    closeNoteView();
+    loadNoteCards();
     toast('Note deleted', 'success');
   } catch (err) { toast(err.message, 'error'); }
 }
 
-async function searchNotes() {
-  const keyword   = el('noteSearchInput')?.value?.trim();
-  const startDate = el('noteSearchStart')?.value  || undefined;
-  const endDate   = el('noteSearchEnd')?.value    || undefined;
-  const listEl    = el('noteSearchResults');
-  if (listEl) listEl.innerHTML = '<div class="loading">Searching\u2026</div>';
+function editNoteFromView() {
+  if (!_noteViewId) return;
+  const titleEl   = el('noteViewTitle');
+  const contentEl = el('noteViewContent');
+  // Make them editable inline
+  titleEl.contentEditable   = 'true';
+  contentEl.contentEditable = 'true';
+  titleEl.style.outline     = '1px solid var(--accent)';
+  contentEl.style.outline   = '1px solid var(--accent)';
+  titleEl.focus();
+  el('notePinBtn').textContent = '💾 Save';
+  el('notePinBtn').onclick     = saveNoteFromView;
+}
+
+async function saveNoteFromView() {
+  if (!_noteViewId) return;
+  const title   = el('noteViewTitle').textContent.trim();
+  const content = el('noteViewContent').innerText.trim();
   try {
-    let url = '/api/notes/search';
-    const params = [];
-    if (keyword)   params.push(`keyword=${encodeURIComponent(keyword)}`);
-    if (startDate) params.push(`startDate=${startDate}`);
-    if (endDate)   params.push(`endDate=${endDate}`);
-    if (params.length) url += '?' + params.join('&');
-
-    const res   = await apiGet(url);
-    const notes = res.data || [];
-    if (!notes.length) { listEl.innerHTML = '<p class="loading">No notes found.</p>'; return; }
-    listEl.innerHTML = notes.map(n => `
-      <div class="note-search-item" onclick="jumpToNote('${n.date || ''}')">
-        <div class="nsi-date">${esc(n.date || '')} ${n.mood ? `<span class="nsi-mood">${esc(n.mood)}</span>` : ''} ${!n.isOwner ? '<span class="nsi-mood">Shared</span>' : ''}</div>
-        <div class="nsi-snippet">${esc((n.content || '').slice(0, 130))}${(n.content || '').length > 130 ? '&hellip;' : ''}</div>
-        <div class="nsi-stats">&#x2705; ${n.tasksCompletedToday || 0} &nbsp; &#x1F4AA; ${n.workoutsCompletedToday || 0}</div>
-      </div>`).join('');
-  } catch (err) {
-    if (listEl) listEl.innerHTML = `<p class="loading">${esc(err.message)}</p>`;
-  }
+    await apiPatch(`/api/notes/${_noteViewId}`, { title, content });
+    // Reset editable state
+    el('noteViewTitle').contentEditable   = 'false';
+    el('noteViewContent').contentEditable = 'false';
+    el('noteViewTitle').style.outline     = '';
+    el('noteViewContent').style.outline   = '';
+    el('notePinBtn').textContent = _noteViewPinned ? '📌 Unpin' : '📌 Pin';
+    el('notePinBtn').onclick     = toggleNotePin;
+    toast('Note saved ✅', 'success');
+    loadNoteCards();
+  } catch (err) { toast(err.message, 'error'); }
 }
 
-function jumpToNote(dateStr) {
-  if (!dateStr) return;
-  _noteCurrentDate = dateStr;
-  renderNoteDateNav();
-  loadNoteForDate(dateStr);
-  el('noteContent')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
+// Backwards-compat stubs (some event-listeners or other code might reference these)
+function deleteNote()    { deleteNoteFromView(); }
+function setMood()       {}
+function onNoteInput()   {}
+function autoSaveNote()  {}
+function saveNote()      { saveNewNote(); }
+function noteDatePrev()  {}
+function noteDateNext()  {}
+function noteTodayJump() {}
+function jumpToNote()    {}
 
 // ==========================================================================
 // PHASE 1: STREAKS WIDGET
@@ -3026,4 +3363,491 @@ async function submitCollabProgress() {
     toast('Progress saved ✅', 'success');
     loadCollabTasks();
   } catch (err) { toast(err.message || 'Failed to save progress', 'error'); }
+}
+
+// ==========================================================================
+// SESSION TRACKER
+// ==========================================================================
+let _sessions = [];
+
+async function loadSessions() {
+  const list = document.getElementById('sessionList');
+  if (!list) return;
+  list.innerHTML = '<div class="loading">Loading sessions…</div>';
+  try {
+    const data = await apiGet('/api/sessions');
+    _sessions = data || [];
+    renderSessions();
+    // Prefill today's date
+    const dateInput = document.getElementById('sessionDate');
+    if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().split('T')[0];
+  } catch (e) {
+    list.innerHTML = '<p style="color:var(--danger,#f87171);padding:0.5rem">Failed to load sessions.</p>';
+  }
+}
+
+function renderSessions() {
+  const list = document.getElementById('sessionList');
+  if (!list) return;
+  if (!_sessions.length) {
+    list.innerHTML = `<div style="text-align:center;padding:2rem;opacity:.6">
+      <div style="font-size:2.5rem">🏃</div>
+      <div style="font-weight:600;margin:.5rem 0">No sessions logged yet</div>
+      <div style="font-size:.85rem">Use the form above or speak a session to get started.</div>
+    </div>`;
+    return;
+  }
+  list.innerHTML = _sessions.map(s => `
+    <div style="background:var(--card-bg,#1e293b);border-radius:12px;padding:0.9rem 1rem;margin-bottom:0.6rem;display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="font-weight:700;font-size:0.95rem">${esc(s.type || 'Workout')}</div>
+        <div style="font-size:0.8rem;opacity:.7;margin-top:2px">
+          ${s.sessionDate || ''}
+          ${s.durationMinutes ? ' · <b>' + s.durationMinutes + '</b> min' : ''}
+          ${s.caloriesBurned ? ' · <b>' + s.caloriesBurned + '</b> kcal' : ''}
+          ${s.mood ? ' · ' + esc(s.mood) : ''}
+        </div>
+        ${s.notes ? `<div style="font-size:0.8rem;margin-top:4px;opacity:.6">${esc(s.notes)}</div>` : ''}
+      </div>
+      <button class="btn-icon" onclick="deleteSession('${s.id}')" title="Delete" style="flex-shrink:0">🗑</button>
+    </div>`).join('');
+}
+
+async function submitSession(e) {
+  e.preventDefault();
+  const type     = document.getElementById('sessionType')?.value?.trim();
+  const duration = document.getElementById('sessionDuration')?.value;
+  const calories = document.getElementById('sessionCalories')?.value;
+  const mood     = document.getElementById('sessionMood')?.value?.trim();
+  const notes    = document.getElementById('sessionNotes')?.value?.trim();
+  const date     = document.getElementById('sessionDate')?.value;
+  if (!type) { toast('Please enter a session type', 'error'); return; }
+  try {
+    await apiPost('/api/sessions', {
+      type,
+      durationMinutes: duration ? parseInt(duration) : null,
+      caloriesBurned: calories ? parseInt(calories) : null,
+      mood: mood || null,
+      notes: notes || null,
+      sessionDate: date || null
+    });
+    document.getElementById('sessionForm').reset();
+    document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
+    toast('Session saved!', 'success');
+    aiSuggest(`Just completed a ${type || 'fitness'} session. Give a recovery or motivation tip.`);
+    loadSessions();
+  } catch (err) {
+    toast(err.message || 'Failed to save session', 'error');
+  }
+}
+
+async function deleteSession(id) {
+  if (!confirm('Delete this session?')) return;
+  try {
+    await apiDelete(`/api/sessions/${id}`);
+    toast('Session deleted', 'success');
+    loadSessions();
+  } catch (err) {
+    toast(err.message || 'Failed to delete', 'error');
+  }
+}
+
+// Voice Session Logger — uses Web Speech API + Groq AI to parse spoken input
+function startSessionVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { toast('Speech recognition not supported in this browser', 'error'); return; }
+  const btn = document.getElementById('sessionVoiceBtn');
+  const status = document.getElementById('sessionVoiceStatus');
+  const rec = new SpeechRecognition();
+  rec.lang = 'en-US';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  btn.textContent = '⏹ Listening…';
+  btn.style.background = 'var(--danger, #f87171)';
+  if (status) status.textContent = 'Listening… speak your session (e.g. "45 min gym, 300 calories, felt energized")';
+  rec.start();
+  rec.onresult = async (event) => {
+    const transcript = event.results[0][0].transcript;
+    if (status) status.textContent = `Heard: "${transcript}" — parsing…`;
+    btn.textContent = '🎤 Speak Session';
+    btn.style.background = '';
+    await parseSessionWithAI(transcript);
+  };
+  rec.onerror = () => {
+    btn.textContent = '🎤 Speak Session';
+    btn.style.background = '';
+    if (status) status.textContent = '';
+    toast('Could not hear you, please try again', 'error');
+  };
+  rec.onend = () => {
+    btn.textContent = '🎤 Speak Session';
+    btn.style.background = '';
+  };
+}
+
+async function parseSessionWithAI(transcript) {
+  const status = document.getElementById('sessionVoiceStatus');
+  try {
+    const resp = await apiPost('/api/ai/chat', {
+      message: `Extract workout session details from this spoken input and return ONLY a JSON object with fields: type (string), durationMinutes (number or null), caloriesBurned (number or null), mood (string or null), notes (string or null). Spoken input: "${transcript}"`
+    });
+    let text = resp?.message || resp?.reply || '';
+    // Strip markdown code fences if present
+    text = text.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(text);
+    if (parsed.type) document.getElementById('sessionType').value = parsed.type;
+    if (parsed.durationMinutes) document.getElementById('sessionDuration').value = parsed.durationMinutes;
+    if (parsed.caloriesBurned) document.getElementById('sessionCalories').value = parsed.caloriesBurned;
+    if (parsed.mood) document.getElementById('sessionMood').value = parsed.mood;
+    if (parsed.notes) document.getElementById('sessionNotes').value = parsed.notes;
+    if (status) status.textContent = '✅ Form filled — review and save!';
+    toast('Session details extracted!', 'success');
+  } catch (e) {
+    // Fallback: just fill notes with the transcript
+    document.getElementById('sessionNotes').value = transcript;
+    if (status) status.textContent = '⚠ Could not parse — transcript added to notes.';
+  }
+}
+
+// ==========================================================================
+// PROGRESS PHOTO GALLERY
+// ==========================================================================
+let _progressPhotos = [];
+
+async function loadProgressPhotos() {
+  const grid = document.getElementById('photoGalleryGrid');
+  if (!grid) return;
+  grid.innerHTML = '<div class="loading" style="grid-column:1/-1">Loading photos…</div>';
+  // Prefill today date
+  const dateInput = document.getElementById('photoDate');
+  if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().split('T')[0];
+  try {
+    const data = await apiGet('/api/progress-photos');
+    _progressPhotos = data || [];
+    renderProgressPhotos();
+  } catch (e) {
+    grid.innerHTML = '<p style="color:var(--danger,#f87171);grid-column:1/-1">Failed to load photos.</p>';
+  }
+}
+
+function renderProgressPhotos() {
+  const grid = document.getElementById('photoGalleryGrid');
+  if (!grid) return;
+  if (!_progressPhotos.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2rem;opacity:.6">
+      <div style="font-size:2.5rem">📸</div>
+      <div style="font-weight:600;margin:.5rem 0">No progress photos yet</div>
+      <div style="font-size:.85rem">Upload your first check-in photo above!</div>
+    </div>`;
+    return;
+  }
+  grid.innerHTML = _progressPhotos.map(p => `
+    <div style="position:relative;border-radius:12px;overflow:hidden;background:var(--card-bg,#1e293b);aspect-ratio:1/1">
+      <img src="${p.previewUrl}" alt="progress photo"
+           style="width:100%;height:100%;object-fit:cover;display:block"
+           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22/>'"/>
+      <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.65);padding:0.4rem 0.5rem;font-size:0.7rem">
+        <div style="font-weight:600">${p.photoDate || ''}</div>
+        ${p.notes ? `<div style="opacity:.8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.notes)}</div>` : ''}
+      </div>
+      <button onclick="deleteProgressPhoto('${p.id}')"
+              style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:0.75rem;color:#fff">🗑</button>
+    </div>`).join('');
+}
+
+async function uploadProgressPhoto(e) {
+  e.preventDefault();
+  const fileInput = document.getElementById('photoFile');
+  const date = document.getElementById('photoDate')?.value;
+  const notes = document.getElementById('photoNotes')?.value?.trim();
+  if (!fileInput?.files?.length) { toast('Please select a photo', 'error'); return; }
+  const btn = document.getElementById('photoUploadBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  if (notes) formData.append('notes', notes);
+  if (date) formData.append('photoDate', date);
+  try {
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+    const resp = await fetch('/api/progress-photos', {
+      method: 'POST',
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+      body: formData
+    });
+    if (!resp.ok) throw new Error('Upload failed');
+    document.getElementById('photoUploadForm').reset();
+    document.getElementById('photoDate').value = new Date().toISOString().split('T')[0];
+    toast('Photo uploaded!', 'success');
+    loadProgressPhotos();
+  } catch (err) {
+    toast(err.message || 'Upload failed', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⬆ Upload Photo'; }
+  }
+}
+
+async function deleteProgressPhoto(id) {
+  if (!confirm('Delete this photo?')) return;
+  try {
+    await apiDelete(`/api/progress-photos/${id}`);
+    toast('Photo deleted', 'success');
+    loadProgressPhotos();
+  } catch (err) {
+    toast(err.message || 'Failed to delete', 'error');
+  }
+}
+
+// ==========================================================================
+// BRAIN COACH
+// ==========================================================================
+function initBrainCoachTab() {
+  loadChallenges();
+}
+
+// ---- Challenges ----
+let _challenges = [];
+
+async function loadChallenges() {
+  const list = document.getElementById('challengeList');
+  if (!list) return;
+  list.innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const res = await apiGet('/api/brain-coach/challenges');
+    console.log('[BrainCoach] loadChallenges response:', res);
+    const raw = (res && res.data) ? res.data : (Array.isArray(res) ? res : []);
+    // Deduplicate by question text — keep the first occurrence (latest by API order)
+    const seen = new Set();
+    _challenges = raw.filter(c => {
+      const key = (c.question || '').trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    renderChallenges();
+  } catch (e) {
+    console.error('[BrainCoach] loadChallenges error:', e);
+    list.innerHTML = '<p style="color:var(--danger,#f87171);padding:.5rem">Failed to load challenges.</p>';
+  }
+}
+
+function renderChallenges() {
+  const list = document.getElementById('challengeList');
+  if (!list) return;
+  if (!_challenges.length) {
+    list.innerHTML = `<div style="text-align:center;padding:2rem;opacity:.6">
+      <div style="font-size:2.5rem">🎯</div>
+      <div style="font-weight:600;margin:.5rem 0">No challenges yet</div>
+      <div style="font-size:.85rem">Click "New Challenge" to get started!</div>
+    </div>`;
+    return;
+  }
+  list.innerHTML = _challenges.map(c => `
+    <div style="background:var(--card-bg,#1e293b);border-radius:12px;padding:1rem;border-left:3px solid ${c.correct===true?'#22c55e':c.correct===false?'#f87171':'var(--primary,#6366f1)'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <div style="font-size:0.7rem;opacity:.6;margin-bottom:.4rem">${esc(c.category||'')} · ${esc(c.difficulty||'')} ${c.correct===true?'✅':c.correct===false?'❌':''}</div>
+          <div style="font-weight:600;margin-bottom:.5rem">${esc(c.question||'')}</div>
+          ${c.hint ? `<details style="font-size:.8rem;opacity:.7;margin-bottom:.5rem"><summary style="cursor:pointer">💡 Hint</summary>${esc(c.hint)}</details>` : ''}
+          ${c.userAnswer
+            ? `<div style="font-size:.85rem;margin-top:.4rem">Your answer: <b>${esc(c.userAnswer)}</b><br/>Correct answer: <b>${esc(c.answer||'')}</b></div>`
+            : `<div style="display:flex;gap:.5rem;margin-top:.5rem">
+                <input id="ans-${c.id}" class="form-input" style="flex:1" placeholder="Your answer…"/>
+                <button class="btn-primary btn-sm" onclick="submitChallengeAnswer('${c.id}')">Submit</button>
+              </div>`
+          }
+        </div>
+        <button class="btn-icon" onclick="deleteChallenge('${c.id}')" title="Delete" style="flex-shrink:0;margin-left:.5rem">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+async function generateChallenge() {
+  const category   = document.getElementById('challengeCategory')?.value;
+  const difficulty = document.getElementById('challengeDifficulty')?.value;
+  const list = document.getElementById('challengeList');
+  console.log('[BrainCoach] Generating challenge...', { category, difficulty });
+  try {
+    toast('Generating challenge…', 'info');
+    if (list) list.innerHTML = '<div class="loading">Generating challenge…</div>';
+    const res = await apiPost('/api/brain-coach/challenges/generate', { category, difficulty });
+    console.log('[BrainCoach] Challenge API response:', res);
+    await loadChallenges();
+  } catch (err) {
+    console.error('[BrainCoach] Challenge generation failed:', err);
+    toast('Challenge generation failed. Try again.', 'error');
+    if (list) list.innerHTML = '<p style="color:var(--danger,#f87171);padding:.5rem;text-align:center">Challenge generation failed. Try again.</p>';
+  }
+}
+
+async function submitChallengeAnswer(id) {
+  const input = document.getElementById(`ans-${id}`);
+  const answer = input?.value?.trim();
+  if (!answer) { toast('Please enter an answer', 'error'); return; }
+  try {
+    await apiPost(`/api/brain-coach/challenges/${id}/answer`, { answer });
+    loadChallenges();
+  } catch (err) {
+    toast(err.message || 'Failed to submit', 'error');
+  }
+}
+
+async function deleteChallenge(id) {
+  if (!confirm('Delete this challenge?')) return;
+  try {
+    await apiDelete(`/api/brain-coach/challenges/${id}`);
+    toast('Challenge deleted', 'success');
+    loadChallenges();
+  } catch (err) {
+    toast(err.message || 'Failed to delete', 'error');
+  }
+}
+
+// ---- Decision Log ----
+let _decisions = [];
+
+async function loadDecisionLogs() {
+  const list = document.getElementById('decisionList');
+  if (!list) return;
+  list.innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const res = await apiGet('/api/brain-coach/decisions');
+    _decisions = (res && res.data) ? res.data : (Array.isArray(res) ? res : []);
+    renderDecisionLogs();
+  } catch (e) {
+    list.innerHTML = '<p style="color:var(--danger,#f87171);padding:.5rem">Failed to load journal.</p>';
+  }
+}
+
+function renderDecisionLogs() {
+  const list = document.getElementById('decisionList');
+  if (!list) return;
+  if (!_decisions.length) {
+    list.innerHTML = `<div style="text-align:center;padding:2rem;opacity:.6">
+      <div style="font-size:2.5rem">📓</div>
+      <div style="font-weight:600;margin:.5rem 0">No journal entries yet</div>
+      <div style="font-size:.85rem">Record a decision above to get AI reflection.</div>
+    </div>`;
+    return;
+  }
+  list.innerHTML = _decisions.map(d => `
+    <div style="background:var(--card-bg,#1e293b);border-radius:12px;padding:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <div style="font-size:.7rem;opacity:.6;margin-bottom:.3rem">${d.decisionDate||''}</div>
+          <div style="font-weight:700;margin-bottom:.4rem">${esc(d.decision||'')}</div>
+          ${d.context ? `<div style="font-size:.82rem;opacity:.7;margin-bottom:.4rem">Context: ${esc(d.context)}</div>` : ''}
+          ${d.aiReflection ? `<div style="font-size:.82rem;border-left:3px solid var(--primary,#6366f1);padding-left:.6rem;margin:.5rem 0;opacity:.85">🤖 ${esc(d.aiReflection)}</div>` : ''}
+          ${d.outcome
+            ? `<div style="font-size:.82rem;margin-top:.4rem;opacity:.8">Outcome: <b>${esc(d.outcome)}</b></div>`
+            : `<div style="display:flex;gap:.5rem;margin-top:.5rem">
+                <input id="outcome-${d.id}" class="form-input" style="flex:1" placeholder="What was the outcome?"/>
+                <button class="btn-secondary btn-sm" onclick="saveDecisionOutcome('${d.id}')">Save Outcome</button>
+              </div>`
+          }
+        </div>
+        <button class="btn-icon" onclick="deleteDecisionLog('${d.id}')" title="Delete" style="flex-shrink:0;margin-left:.5rem">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+async function submitDecision(e) {
+  e.preventDefault();
+  const decision = document.getElementById('decisionText')?.value?.trim();
+  const context  = document.getElementById('decisionContext')?.value?.trim();
+  if (!decision) { toast('Please enter a decision', 'error'); return; }
+  try {
+    toast('Saving and asking AI…', 'info');
+    await apiPost('/api/brain-coach/decisions', { decision, context: context || '' });
+    document.getElementById('decisionForm').reset();
+    toast('Decision saved!', 'success');
+    loadDecisionLogs();
+  } catch (err) {
+    toast(err.message || 'Failed to save', 'error');
+  }
+}
+
+async function saveDecisionOutcome(id) {
+  const input = document.getElementById(`outcome-${id}`);
+  const outcome = input?.value?.trim();
+  if (!outcome) { toast('Please enter an outcome', 'error'); return; }
+  try {
+    await apiPatch(`/api/brain-coach/decisions/${id}/outcome`, { outcome });
+    toast('Outcome saved!', 'success');
+    loadDecisionLogs();
+  } catch (err) {
+    toast(err.message || 'Failed to save', 'error');
+  }
+}
+
+async function deleteDecisionLog(id) {
+  if (!confirm('Delete this journal entry?')) return;
+  try {
+    await apiDelete(`/api/brain-coach/decisions/${id}`);
+    toast('Entry deleted', 'success');
+    loadDecisionLogs();
+  } catch (err) {
+    toast(err.message || 'Failed to delete', 'error');
+  }
+}
+
+// ==========================================================================
+// STEP 9: AI SUGGESTIONS (non-intrusive tips)
+// ==========================================================================
+async function aiSuggest(context) {
+  try {
+    const data = await apiPost('/api/ai/suggest', { context });
+    const tip = data?.tip || data?.data || data;
+    if (typeof tip === 'string' && tip.trim()) {
+      showAiTip(tip.trim());
+    }
+  } catch (_) { /* silent – suggestions are best-effort */ }
+}
+
+function showAiTip(text) {
+  let el = document.getElementById('aiTipBanner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'aiTipBanner';
+    el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+      'background:var(--primary,#6366f1);color:#fff;padding:.65rem 1.2rem;border-radius:12px;' +
+      'font-size:.82rem;max-width:90vw;z-index:2000;box-shadow:0 4px 16px rgba(0,0,0,.35);' +
+      'display:flex;gap:.75rem;align-items:center';
+    el.innerHTML = '<span id="aiTipText"></span><button onclick="this.parentElement.remove()" style="background:transparent;border:none;color:#fff;font-size:1.1rem;cursor:pointer;line-height:1">×</button>';
+    document.body.appendChild(el);
+  }
+  document.getElementById('aiTipText').textContent = '🤖 ' + text;
+  el.style.display = 'flex';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { if (el.parentElement) el.remove(); }, 8000);
+}
+
+// ==========================================================================
+// STEP 9: AI SUGGESTIONS (non-intrusive tips)
+// ==========================================================================
+async function aiSuggest(context) {
+  try {
+    const data = await apiPost('/api/ai/suggest', { context });
+    const tip = data?.tip || data?.data || data;
+    if (typeof tip === 'string' && tip.trim()) {
+      showAiTip(tip.trim());
+    }
+  } catch (_) { /* silent – suggestions are best-effort */ }
+}
+
+function showAiTip(text) {
+  let el = document.getElementById('aiTipBanner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'aiTipBanner';
+    el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+      'background:var(--primary,#6366f1);color:#fff;padding:.65rem 1.2rem;border-radius:12px;' +
+      'font-size:.82rem;max-width:90vw;z-index:2000;box-shadow:0 4px 16px rgba(0,0,0,.35);' +
+      'display:flex;gap:.75rem;align-items:center';
+    el.innerHTML = '<span id="aiTipText"></span><button onclick="this.parentElement.remove()" style="background:transparent;border:none;color:#fff;font-size:1.1rem;cursor:pointer;line-height:1">×</button>';
+    document.body.appendChild(el);
+  }
+  document.getElementById('aiTipText').textContent = '🤖 ' + text;
+  el.style.display = 'flex';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { if (el.parentElement) el.remove(); }, 8000);
 }

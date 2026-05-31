@@ -1,0 +1,85 @@
+/* ========= Morning Briefing CSS ========= */
+.morning-briefing-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(8px);
+}
+
+.morning-briefing-card {
+    background: linear-gradient(135deg, #1e1e2e, #13131f);
+    border-radius: 24px;
+    padding: 36px 32px;
+    max-width: 520px;
+    width: 100%;
+    border: 1px solid rgba(99,102,241,0.3);
+    box-shadow: 0 0 60px rgba(99,102,241,0.15);
+    animation: briefingFadeIn 0.4s ease;
+}
+
+@keyframes briefingFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0);    }
+}
+
+.morning-briefing-greeting {
+    font-size: 1.6rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 6px;
+}
+
+.morning-briefing-date {
+    font-size: 0.85rem;
+    color: var(--text-secondary, #a0a0b0);
+    margin-bottom: 24px;
+}
+
+.morning-briefing-content {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--text, #e2e2f0);
+    white-space: pre-wrap;
+    margin-bottom: 28px;
+}
+
+.morning-briefing-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-briefing-start {
+    flex: 1;
+    padding: 12px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-briefing-start:hover { opacity: 0.88; }
+
+.btn-briefing-dismiss {
+    padding: 12px 20px;
+    background: transparent;
+    color: var(--text-secondary, #a0a0b0);
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+    border-radius: 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.btn-briefing-dismiss:hover { border-color: #6366f1; }

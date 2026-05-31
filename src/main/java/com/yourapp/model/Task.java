@@ -168,6 +168,9 @@ public class Task {
     @Builder.Default
     private boolean alarmFired = false;
 
+    /** Optional life area tag — references a LifeArea document id. */
+    private String lifeAreaId;
+
     @lombok.Data
     @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor

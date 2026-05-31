@@ -59,9 +59,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(JwtException.class)
     public ResponseEntity<ApiResponse<Void>> handleJwt(JwtException ex) {
-        log.error("JWT error: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Authentication service error. Please try again."));
+        log.warn("JWT error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Invalid or expired token. Please log in again."));
     }
 
     @ExceptionHandler(IOException.class)

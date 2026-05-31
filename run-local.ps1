@@ -2,17 +2,26 @@
 # Run this script to start the application locally
 
 # Set environment variables
-$env:JWT_SECRET = "your-local-secret-key-must-be-at-least-256-bits-long-abcdefghijklmnopqrstuvwxyz0123456789"
+$env:JWT_SECRET = "your-jwt-secret-here"
 $env:JWT_EXPIRATION_MS = "2592000000"
 $env:JWT_REFRESH_EXPIRATION_MS = "7776000000"
 
-# MongoDB - Update with your local MongoDB connection
-$env:MONGODB_URI = "mongodb://localhost:27017/ai-execution"
+# MongoDB - Atlas connection
+$env:MONGODB_URI = "mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<dbname>?retryWrites=true&w=majority"
 
 # Groq API (optional for local testing)
-$env:GROQ_API_KEY = "gsk-dummy-key-for-local-testing"
+$env:GROQ_API_KEY = "your-groq-api-key-here"
 $env:GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 $env:GROQ_MODEL = "llama-3.3-70b-versatile"
+
+# Web Push VAPID (auto-generated if blank)
+$env:VAPID_PUBLIC_KEY = "your-vapid-public-key-here"
+$env:VAPID_PRIVATE_KEY = "your-vapid-private-key-here"
+$env:VAPID_SUBJECT = "mailto:your-email@example.com"
+
+# Mail (optional for local testing)
+$env:MAIL_USERNAME = "noreply@aiexecution.app"
+$env:MAIL_PASSWORD = "dummy-password"
 
 # Twilio (optional for local testing)
 $env:TWILIO_ACCOUNT_SID = ""

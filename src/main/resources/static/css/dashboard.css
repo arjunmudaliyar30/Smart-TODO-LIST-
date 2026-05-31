@@ -2598,3 +2598,970 @@ select:focus {
   from { transform: translateX(-50%) translateY(20px); opacity: 0; }
   to   { transform: translateX(-50%) translateY(0);   opacity: 1; }
 }
+
+/* ===================================================
+   UI FIX 1 — Collapsible Section Cards
+=================================================== */
+.forge-collapse-wrap {
+  margin-bottom: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #1a1a2e;
+}
+.forge-collapse-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  border-bottom: 1px solid transparent;
+  transition: background 0.15s ease;
+}
+.forge-collapse-header:hover { background: rgba(255,255,255,0.04); }
+.forge-collapse-wrap.expanded .forge-collapse-header { border-bottom-color: rgba(255,255,255,0.06); }
+.forge-collapse-arrow {
+  font-size: 16px;
+  transition: transform 0.25s ease;
+  color: #a0a0b0;
+}
+.forge-collapse-wrap.expanded .forge-collapse-arrow { transform: rotate(90deg); }
+.forge-collapse-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.forge-collapse-wrap.expanded .forge-collapse-body { max-height: 1200px; }
+
+/* ===================================================
+   UI FIX 2 — Session Tracker Bottom Sheet
+=================================================== */
+.session-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 1200;
+}
+.session-overlay.active { display: block; }
+.session-bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #1a1a2e;
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px 32px;
+  z-index: 1201;
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.session-bottom-sheet.active { transform: translateY(0); }
+.session-sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  margin: 0 auto 18px;
+}
+.session-sheet-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 1rem;
+}
+
+/* ===================================================
+   UI FIX 3 — Fitness Nav "More ▾" Dropdown
+=================================================== */
+.fit-more-wrap { position: relative; }
+.fit-more-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #1e1e2e;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  z-index: 200;
+  min-width: 160px;
+  padding: 4px;
+  flex-direction: column;
+}
+.fit-more-wrap.open .fit-more-dropdown { display: flex; }
+.fit-more-btn { position: relative; }
+.fit-more-wrap.open .fit-more-btn {
+  color: var(--accent, #6c63ff);
+  border-bottom-color: var(--accent, #6c63ff);
+}
+.fit-more-item {
+  text-align: left;
+  border-radius: 7px;
+  margin: 1px 0;
+  padding: 0.5rem 1rem !important;
+  border-bottom: none !important;
+  font-size: 0.87rem;
+  font-weight: 600;
+  background: none;
+  border: none;
+  color: var(--text-secondary, #9ca3af);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.fit-more-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.fit-more-item.active { background: rgba(108,99,255,0.15); color: var(--accent, #6c63ff); }
+
+/* ===================================================
+   UI FIX 4 — General Visual Polish
+=================================================== */
+/* Card padding & radius */
+.habit-tracker-card,
+.mood-logger-card {
+  padding: 16px;
+  border-radius: 14px;
+}
+/* Section headers */
+.page-header h2 { font-size: 1rem; font-weight: 700; color: #ffffff; }
+/* Buttons touch targets */
+.btn-primary, .btn-secondary {
+  min-height: 44px;
+  border-radius: 10px;
+  padding: 10px 20px;
+}
+/* Form field spacing */
+.form-input { margin-bottom: 8px; border-radius: 10px; }
+/* Sub-text */
+.form-hint, .text-muted, [style*="color:var(--text-muted)"] { font-size: 13px; color: #aaaaaa; }
+/* Card gap inside task tab */
+#tab-tasks .forge-collapse-wrap + .forge-collapse-wrap { margin-top: 0; }
+/* ============================================================
+   STEPS 3, 5, 6, 7 — New styles appended
+   ============================================================ */
+
+/* --- Step 3: Evening Reflection Bottom Sheet --- */
+.refl-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 9998;
+}
+.refl-overlay.active { display: block; }
+.refl-bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: #1a1a2e;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  padding: 16px 20px 32px;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  max-height: 85vh;
+  overflow: hidden;
+}
+.refl-bottom-sheet.active { transform: translateY(0); }
+.refl-sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  margin: 0 auto 14px;
+}
+.btn-reflection-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(108,99,255,0.12);
+  border: 1px solid rgba(108,99,255,0.3);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #a78bfa;
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+}
+.btn-reflection-trigger:hover { background: rgba(108,99,255,0.2); }
+
+/* --- Step 5: Chat conversation card avatar --- */
+.conversation-item { gap: 0.75rem; }
+.convo-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.convo-info { flex: 1; min-width: 0; }
+.conversation-peer { font-weight: 700; font-size: 0.92rem; }
+.conversation-last {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  margin-top: 2px;
+}
+
+/* Chat bubbles — gradient sent */
+.chat-bubble.mine {
+  background: linear-gradient(135deg, #6c63ff, #a78bfa);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.chat-bubble.theirs {
+  background: #252540;
+  color: #e8e8ff;
+  border-bottom-left-radius: 4px;
+}
+
+/* Chat input bar — cleaner layout */
+.chat-input-bar textarea {
+  border-radius: 20px;
+  padding: 10px 14px;
+  resize: none;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 0.88rem;
+}
+.chat-input-bar textarea:focus {
+  outline: none;
+  border-color: var(--accent, #6c63ff);
+}
+.chat-input-bar .btn-primary {
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  min-height: unset;
+  padding: 0;
+  flex-shrink: 0;
+  align-self: flex-end;
+}
+
+/* --- Step 6: Accountability score compact/expanded --- */
+#accountabilityScoreCard.score-expanded .score-expand-arrow {
+  transform: rotate(90deg);
+}
+.score-expanded-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+#accountabilityScoreCard.score-expanded .score-expanded-body {
+  max-height: 300px;
+}
+#accountabilityScoreCard.score-expanded #scoreComment {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+/* --- Step 7: General visual polish additions --- */
+/* Card background consistency */
+.task-card, .goal-card, .fit-summary-card, .fit-calc-card, .fit-workouts-section {
+  background: #1a1a2e;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+/* Note editor card */
+.note-editor-wrap {
+  background: #1a1a2e;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.07);
+  padding: 14px;
+  margin-bottom: 1rem;
+}
+/* Inner tab bar polish */
+.inner-tab-bar {
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 1rem;
+}
+.inner-tab {
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+.inner-tab.active {
+  background: var(--accent, #6c63ff);
+  color: #fff;
+}
+/* Section label */
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5a5a7a;
+  padding: 6px 0 4px;
+}
+/* People search bar */
+.people-search-bar input {
+  border-radius: 20px;
+}
+/* Streak widget polish */
+.streak-widget {
+  background: #1a1a2e;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+}
+
+/* ===== Step 2: Unified FORGE speed-dial FAB ===== */
+#voiceFab { display: none !important; }
+.ai-fab { display: none !important; }
+.forge-dial-item { display: flex; align-items: center; gap: 10px; }
+.forge-dial-label {
+  background: rgba(20,20,40,0.92);
+  color: #e8e8ff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.12);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: dialItemIn 0.2s ease;
+}
+.forge-dial-btn {
+  width: 44px; height: 44px; border-radius: 50%; border: none;
+  background: #1a1a3e; color: #fff; font-size: 1.1rem; cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center;
+  animation: dialItemIn 0.2s ease;
+}
+#forgeFabMain:active { transform: scale(0.92); }
+#forgeFabWrap.open #forgeFabMain { transform: rotate(45deg); }
+@keyframes dialItemIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ===== Chat / People redesign ===== */
+
+/* Thread takes full section height */
+.chat-thread {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - var(--header-height, 56px) - var(--bottom-nav-height, 60px) - 1.5rem);
+  background: #0d0d1a;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.07);
+}
+
+/* Header */
+.chat-thread-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #12121f;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+.chat-back-btn {
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: #c0c0e8;
+  font-size: 1.1rem;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.18s;
+}
+.chat-back-btn:hover { background: rgba(108,99,255,0.25); color: #fff; }
+.chat-peer-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.chat-peer-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: linear-gradient(135deg, #6c63ff, #4facfe);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; font-weight: 700; color: #fff;
+  flex-shrink: 0;
+}
+.chat-peer-meta { display: flex; flex-direction: column; min-width: 0; }
+.chat-thread-name { font-weight: 700; font-size: 0.95rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-peer-status { font-size: 0.72rem; color: #4ade80; font-weight: 500; }
+
+/* Messages area */
+.chat-window {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 14px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+.chat-window::-webkit-scrollbar { width: 4px; }
+.chat-window::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+
+/* Bubbles */
+.chat-bubble {
+  max-width: 78%;
+  padding: 9px 13px;
+  border-radius: 18px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  word-break: break-word;
+  position: relative;
+}
+.chat-bubble.mine {
+  background: linear-gradient(135deg, #6c63ff 0%, #4facfe 100%);
+  color: #fff;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+.chat-bubble.theirs {
+  background: #1e1e38;
+  color: #e0e0f8;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.07);
+}
+.bubble-time {
+  font-size: 0.65rem;
+  opacity: 0.6;
+  margin-top: 3px;
+  text-align: right;
+}
+
+/* Input bar */
+.chat-input-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  background: #12121f;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+.chat-input-bar textarea {
+  flex: 1;
+  background: #1e1e35;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 22px;
+  padding: 10px 16px;
+  color: #fff;
+  font-size: 0.88rem;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  max-height: 100px;
+  overflow-y: auto;
+  line-height: 1.45;
+  transition: border-color 0.2s;
+}
+.chat-input-bar textarea:focus { border-color: #6c63ff; }
+.chat-input-bar textarea::placeholder { color: #555; }
+.chat-send-btn {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #6c63ff, #4facfe);
+  color: #fff;
+  font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s, opacity 0.15s;
+}
+.chat-send-btn:active { transform: scale(0.9); opacity: 0.85; }
+
+/* Conversation list cards */
+.conversation-item {
+  background: #1a1a2e;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.07);
+  padding: 13px 15px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+}
+.conversation-item:hover, .conversation-item:active { background: #1e1e38; border-color: rgba(108,99,255,0.3); }
+.convo-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: linear-gradient(135deg, #6c63ff, #4facfe);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.convo-info { flex: 1; min-width: 0; }
+.conversation-peer { font-weight: 700; font-size: 0.9rem; color: #fff; }
+.conversation-last {
+  font-size: 0.78rem; color: #888;
+  overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; margin-top: 2px;
+}
+.conversation-unread {
+  background: #6c63ff; color: #fff;
+  font-size: 0.7rem; font-weight: 700;
+  border-radius: 20px; padding: 2px 7px;
+  flex-shrink: 0;
+}
+
+/* ===== Step 10: General visual polish ===== */
+/* Cards */
+.task-card, .goal-card {
+  background: #1a1a2e;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+/* Bottom sheets — standard style */
+.session-overlay, .refl-overlay, .photo-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 999;
+  display: none;
+}
+.session-overlay.active, .refl-overlay.active, .photo-overlay.active { display: block; }
+.session-bottom-sheet, .refl-bottom-sheet {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #1a1a2e;
+  border-top-left-radius: 20px; border-top-right-radius: 20px;
+  padding: 20px 20px 32px;
+  z-index: 1000;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+  max-height: 90vh; overflow-y: auto;
+}
+.session-bottom-sheet.active, .refl-bottom-sheet.active { transform: translateY(0); }
+.session-sheet-handle, .refl-sheet-handle {
+  width: 40px; height: 4px;
+  background: #444; border-radius: 2px;
+  margin: 0 auto 16px;
+}
+/* Buttons */
+.btn-primary {
+  min-height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6c63ff, #4facfe);
+}
+.btn-secondary { min-height: 44px; border-radius: 10px; }
+/* Notes search results list style */
+.note-search-results { margin-top: 0.5rem; }
+.note-search-hd {
+  font-size: 13px; font-weight: 700; color: #a0a0b0;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+  display: flex; align-items: center; gap: 8px;
+}
+/* Combined dash summary card */
+#dashboardSummaryCard {
+  display: block;
+}
+
+/* ---- Task pill tab bar ---- */
+.task-tab-bar {
+  display: flex;
+  gap: 0.4rem;
+  background: #12121f;
+  border-radius: 14px;
+  padding: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.task-tab-bar::-webkit-scrollbar { display: none; }
+.task-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.7rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #8888aa;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s, color 0.18s;
+  min-width: 0;
+}
+.task-tab:hover { background: #1e1e35; color: #c0c0e0; }
+.task-tab.active {
+  background: linear-gradient(135deg, #6c63ff 0%, #4facfe 100%);
+  color: #fff;
+}
+.task-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(255,255,255,0.22);
+  color: inherit;
+  line-height: 1;
+}
+.task-tab:not(.active) .task-tab-badge {
+  background: #2a2a45;
+  color: #a0a0c0;
+}
+
+/* ---- Settings Modal ---- */
+.settings-section {
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  background: #12121f;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.settings-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #8888aa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.2rem;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.settings-label {
+  font-size: 0.9rem;
+  color: #c0c0e0;
+  flex: 1;
+}
+/* Toggle switch */
+.sett-toggle { position: relative; width: 44px; height: 24px; cursor: pointer; flex-shrink: 0; }
+.sett-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.sett-toggle-track {
+  position: absolute; inset: 0;
+  background: #2a2a45; border-radius: 999px;
+  transition: background 0.2s;
+}
+.sett-toggle input:checked + .sett-toggle-track { background: linear-gradient(135deg,#6c63ff,#4facfe); }
+.sett-toggle-track::after {
+  content: '';
+  position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+.sett-toggle input:checked + .sett-toggle-track::after { transform: translateX(20px); }
+
+/* ==========================================================================
+   NOTES CARD-GRID
+   ========================================================================== */
+
+/* ---- Search bar ---- */
+.note-searchbar-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 320px;
+}
+.note-search-icon {
+  position: absolute;
+  left: 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+.note-search-inline {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem 0.45rem 2rem;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  transition: border-color 0.2s;
+}
+.note-search-inline:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(108,99,255,0.25);
+}
+
+/* ---- Create card ---- */
+.note-create-card {
+  background: #12121f;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 1rem;
+  margin-bottom: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.note-create-title {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.3rem 0;
+  width: 100%;
+}
+.note-create-title:focus { outline: none; border-bottom-color: var(--accent); }
+.note-create-title::placeholder { color: var(--text-muted); }
+.note-create-body {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  resize: vertical;
+  width: 100%;
+  min-height: 80px;
+}
+.note-create-body:focus { outline: none; }
+.note-create-body::placeholder { color: var(--text-muted); }
+
+/* ---- Color strip ---- */
+.note-color-strip {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.2rem 0;
+}
+.note-color-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.note-color-btn:hover { transform: scale(1.2); }
+.note-color-btn.selected {
+  border-color: #fff;
+  transform: scale(1.25);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.4);
+}
+
+/* ---- Section header ---- */
+.notes-section-hd {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin: 0.8rem 0 0.5rem;
+}
+
+/* ---- Card grid ---- */
+.note-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.9rem;
+  padding-bottom: 2rem;
+}
+.note-card {
+  background: #1a1a2e;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 1rem;
+  cursor: pointer;
+  min-height: 120px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.note-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+.note-card.note-pinned { border-color: rgba(108,99,255,0.45); }
+.note-pin-icon {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.6rem;
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+.note-card-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.note-card-snippet {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.5;
+  flex: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+.note-card-ts {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.35);
+  text-align: right;
+  margin-top: auto;
+}
+.notes-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem 0;
+  font-size: 0.9rem;
+}
+
+/* ---- Note view modal ---- */
+.note-view-modal-content {
+  max-width: 560px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+.note-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  border-radius: 12px 12px 0 0;
+  padding: 1rem 1rem 0.8rem;
+  background: rgba(255,255,255,0.03);
+}
+.note-view-title-text {
+  font-size: 1.15rem;
+  font-weight: 700;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+.note-view-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.75;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.note-view-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1rem;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.note-view-ts {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 500px) {
+  .note-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .note-searchbar-wrap { max-width: 160px; }
+
+  /* ---- iOS: prevent auto-zoom on focus (needs font-size >= 16px) ---- */
+  .note-search-inline,
+  .note-create-title,
+  .note-create-body,
+  .note-view-body,
+  .note-view-title-text[contenteditable="true"] {
+    font-size: 16px !important;
+  }
+
+  /* ---- iOS: modal anchors to top so keyboard doesn't hide buttons ---- */
+  .modal {
+    align-items: flex-start;
+    padding-top: max(env(safe-area-inset-top, 0.5rem), 0.5rem);
+  }
+  .modal-content {
+    max-height: calc(100dvh - 2rem);
+    max-height: calc(100vh - 2rem); /* fallback for older Safari */
+    -webkit-overflow-scrolling: touch;
+  }
+  .note-view-modal-content {
+    max-height: calc(100dvh - 2rem);
+    max-height: calc(100vh - 2rem);
+  }
+
+  /* ---- iOS: momentum scrolling on note body ---- */
+  .note-view-body {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+  }
+
+  /* ---- iOS: larger tap targets for color buttons ---- */
+  .note-color-btn {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* ======================================================================
+   NOTE CREATE MODAL — Force dark inputs so they don't appear white
+   ====================================================================== */
+#noteCreateModal input,
+#noteCreateModal textarea {
+  background: var(--bg, #12121e) !important;
+  color: var(--text-primary, #e2e8f0) !important;
+  border: 1px solid var(--border, rgba(255,255,255,0.12)) !important;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  font-family: inherit;
+}
+#noteCreateModal input:focus,
+#noteCreateModal textarea:focus {
+  border-color: var(--accent, #6c63ff) !important;
+  box-shadow: 0 0 0 2px rgba(108,99,255,0.18);
+}
+#noteCreateModal input::placeholder,
+#noteCreateModal textarea::placeholder {
+  color: var(--text-muted, #6b7280) !important;
+}
+
+/* ======================================================================
+   DEVELOPER WATERMARK
+   ====================================================================== */
+.dev-watermark {
+  text-align: center;
+  padding: 0.45rem 1rem;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.22);
+  letter-spacing: 0.025em;
+  user-select: none;
+}

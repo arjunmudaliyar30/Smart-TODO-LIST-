@@ -50,6 +50,9 @@ public class Goal {
     @Builder.Default
     private List<String> collaboratorIds = new ArrayList<>();
 
+    /** Optional life area tag — references a LifeArea document id. */
+    private String lifeAreaId;
+
     public enum GoalCategory {
         CAREER, FINANCE, FITNESS, EDUCATION, PERSONAL, BUSINESS, HEALTH, RELATIONSHIP, OTHER
     }

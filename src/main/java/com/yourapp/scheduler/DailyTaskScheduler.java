@@ -39,7 +39,7 @@ public class DailyTaskScheduler {
 
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
 
-    @Scheduled(cron = "0 * * * * *")   // every minute at :00 seconds
+    @Scheduled(cron = "0 * * * * *", zone = "Asia/Kolkata")   // every minute at :00 seconds
     public void fireRecurringTaskReminders() {
         String currentTime = LocalTime.now().format(HH_MM);
         LocalDate today     = LocalDate.now();
