@@ -292,13 +292,14 @@ body {
 /* Credit footer */
 .app-credit-footer {
   position: fixed;
-  bottom: 10px;
+  bottom: max(14px, env(safe-area-inset-bottom, 14px));
   left: 0;
   width: 100%;
   text-align: center;
   font-size: 0.75rem;
   color: #888;
   pointer-events: none;
+  z-index: 300;
 }
 .app-credit-footer .credit-heart { color: #e05252; margin: 0 2px; }
 .app-credit-footer .credit-link {
