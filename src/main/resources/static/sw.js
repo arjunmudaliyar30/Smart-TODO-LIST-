@@ -6,7 +6,7 @@
 
 // Auto-versioned cache name based on deployment timestamp
 // This automatically invalidates cache on every deployment
-const CACHE_NAME = 'ai-execution-20260228'; // Format: YYYYMMDD or timestamp
+const CACHE_NAME = 'ai-execution-20260531'; // Format: YYYYMMDD or timestamp
 
 // Static assets to pre-cache on install (the "app shell")
 const PRECACHE_URLS = [
