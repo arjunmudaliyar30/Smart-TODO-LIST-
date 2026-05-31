@@ -288,3 +288,23 @@ body {
   color: var(--text-muted);
   font-weight: 400;
 }
+
+/* Credit footer */
+.app-credit-footer {
+  position: fixed;
+  bottom: 10px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #888;
+  pointer-events: none;
+}
+.app-credit-footer .credit-heart { color: #e05252; margin: 0 2px; }
+.app-credit-footer .credit-link {
+  color: #6c63ff;
+  text-decoration: none;
+  font-weight: 600;
+  pointer-events: all;
+}
+.app-credit-footer .credit-link:hover { text-decoration: underline; }
