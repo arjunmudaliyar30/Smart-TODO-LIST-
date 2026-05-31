@@ -153,6 +153,18 @@ window.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('themeToggleBtn');
   if (btn) btn.textContent =
     document.body.classList.contains('light-mode') ? '\uD83C\uDF19' : '\uD83C\uDF1E';
+
+  // Inject credit footer as direct body child — always visible on every tab/module
+  if (!document.getElementById('appCreditFooter')) {
+    const footer = document.createElement('div');
+    footer.id = 'appCreditFooter';
+    footer.className = 'app-credit-footer';
+    footer.innerHTML =
+      'Developed with <span class="credit-heart">\u2764</span> by ' +
+      '<a href="https://arjun-portfolio-wheat.vercel.app/" target="_blank" ' +
+      'rel="noopener noreferrer" class="credit-link">Arjun Ramaswamy Mudaliyar</a>';
+    document.body.appendChild(footer);
+  }
 });
 
 // ---- Auth guard ----

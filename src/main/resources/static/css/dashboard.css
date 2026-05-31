@@ -3569,16 +3569,16 @@ select:focus {
 /* Credit footer */
 .app-credit-footer {
   position: fixed;
-  bottom: calc(var(--bottom-nav-height, 64px) + 6px);
+  bottom: calc(var(--bottom-nav-height, 64px) + 4px);
   left: 0;
   width: 100%;
   text-align: center;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: var(--text-muted, #94a3b8);
   pointer-events: none;
-  z-index: 500;
-  opacity: 0.85;
-  letter-spacing: 0.01em;
+  z-index: 105;
+  padding: 4px 8px;
+  background: linear-gradient(to top, var(--bg, #0f1117) 60%, transparent);
 }
 .app-credit-footer .credit-heart { color: #e05252; margin: 0 2px; }
 .app-credit-footer .credit-link {
