@@ -783,6 +783,16 @@ async function loadTasks() {
 
 const PRIORITY_ORDER = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 
+// Track whether the "Done" section is collapsed
+let _doneCollapsed = false;
+function toggleDoneSection() {
+  _doneCollapsed = !_doneCollapsed;
+  const body = document.getElementById('doneSectionBody');
+  const chevron = document.getElementById('doneSectionChevron');
+  if (body) body.style.display = _doneCollapsed ? 'none' : 'grid';
+  if (chevron) chevron.style.transform = _doneCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+}
+
 function renderTasks(tasks) {
   const el = document.getElementById('taskList');
   if (!tasks.length) {
@@ -790,19 +800,23 @@ function renderTasks(tasks) {
     return;
   }
 
-  // Group by section (null/empty → "General")
+  // Split into active and done
+  const doneTasks   = tasks.filter(t => t.status === 'DONE' || t.status === 'COMPLETED');
+  const activeTasks = tasks.filter(t => t.status !== 'DONE' && t.status !== 'COMPLETED');
+
+  // Group active tasks by section (null/empty → "General")
   const groups = {};
-  tasks.forEach(t => {
+  activeTasks.forEach(t => {
     const sec = (t.section && t.section.trim()) ? t.section.trim() : 'General';
     if (!groups[sec]) groups[sec] = [];
     groups[sec].push(t);
   });
 
-  // Sort tasks within each section: active before done, then URGENT→HIGH→MEDIUM→LOW, then title
-  const STATUS_SORT = { PENDING: 0, IN_PROGRESS: 1, DONE: 2, COMPLETED: 2, CANCELLED: 3 };
+  // Sort active tasks within each section: IN_PROGRESS before PENDING, then priority, then title
+  const STATUS_SORT = { IN_PROGRESS: 0, PENDING: 1, CANCELLED: 2 };
   Object.values(groups).forEach(arr => arr.sort((a, b) => {
-    const sa = STATUS_SORT[a.status] ?? 0;
-    const sb = STATUS_SORT[b.status] ?? 0;
+    const sa = STATUS_SORT[a.status] ?? 1;
+    const sb = STATUS_SORT[b.status] ?? 1;
     if (sa !== sb) return sa - sb;
     const pa = PRIORITY_ORDER[a.priority] ?? 4;
     const pb = PRIORITY_ORDER[b.priority] ?? 4;
@@ -816,16 +830,48 @@ function renderTasks(tasks) {
     return a.localeCompare(b);
   });
 
-  el.innerHTML = sectionKeys.map(sec => `
-    <div class="task-section-group">
-      ${sectionKeys.length > 1 || sec !== 'General'
-        ? `<div class="task-section-label">${esc(sec)}</div>`
-        : ''}
-      <div class="card-grid">
-        ${groups[sec].map(t => renderTaskCard(t)).join('')}
+  // Sort done tasks by priority then title
+  doneTasks.sort((a, b) => {
+    const pa = PRIORITY_ORDER[a.priority] ?? 4;
+    const pb = PRIORITY_ORDER[b.priority] ?? 4;
+    return pa !== pb ? pa - pb : (a.title || '').localeCompare(b.title || '');
+  });
+
+  let html = '';
+
+  // Active sections
+  if (sectionKeys.length) {
+    html += sectionKeys.map(sec => `
+      <div class="task-section-group">
+        ${sectionKeys.length > 1 || sec !== 'General'
+          ? `<div class="task-section-label">${esc(sec)}</div>`
+          : ''}
+        <div class="card-grid">
+          ${groups[sec].map(t => renderTaskCard(t)).join('')}
+        </div>
       </div>
-    </div>
-  `).join('');
+    `).join('');
+  } else if (!doneTasks.length) {
+    el.innerHTML = emptyStateHTML('📋', 'No tasks yet', 'Stay productive — add your first task to get started!', '+ New Task', "document.getElementById('openTaskModal').click()");
+    return;
+  }
+
+  // Done section — collapsible, at the bottom
+  if (doneTasks.length) {
+    html += `
+      <div class="task-section-group task-done-section">
+        <div class="task-section-label done-section-header" onclick="toggleDoneSection()" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;">
+          <span>✅ Done <span class="done-count-badge" style="background:rgba(108,99,255,0.2);color:#a0a0c0;border-radius:12px;padding:1px 8px;font-size:0.78rem;font-weight:600;margin-left:6px;">${doneTasks.length}</span></span>
+          <span id="doneSectionChevron" style="transition:transform 0.2s;display:inline-block;${_doneCollapsed ? 'transform:rotate(-90deg)' : ''}">▾</span>
+        </div>
+        <div id="doneSectionBody" class="card-grid" style="display:${_doneCollapsed ? 'none' : 'grid'}">
+          ${doneTasks.map(t => renderTaskCard(t)).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  el.innerHTML = html;
 }
 
 function renderTaskCard(t) {

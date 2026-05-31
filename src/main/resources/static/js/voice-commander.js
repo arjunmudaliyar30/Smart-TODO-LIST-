@@ -282,13 +282,38 @@
 
   // ---------- Speech Synthesis -------------------------------------------
 
+  // Cache a consistent English voice so it sounds the same on all devices
+  let _preferredVoice = null;
+
+  function _loadPreferredVoice() {
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) return;
+    _preferredVoice =
+      voices.find(v => /google us english/i.test(v.name)) ||
+      voices.find(v => /microsoft zira/i.test(v.name)) ||
+      voices.find(v => /microsoft david/i.test(v.name)) ||
+      voices.find(v => v.lang === 'en-US' && !v.localService) ||  // online/cloud voice
+      voices.find(v => v.lang === 'en-US') ||
+      voices.find(v => v.lang.startsWith('en-')) ||
+      null;
+  }
+
+  // Voices load asynchronously on Chrome/Android — listen for the event
+  if (window.speechSynthesis) {
+    _loadPreferredVoice();
+    window.speechSynthesis.onvoiceschanged = _loadPreferredVoice;
+  }
+
   function speak(text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'en-US';
     utt.rate = 1.1;
     utt.pitch = 1;
     utt.volume = 0.9;
+    if (!_preferredVoice) _loadPreferredVoice();
+    if (_preferredVoice) utt.voice = _preferredVoice;
     window.speechSynthesis.speak(utt);
   }
 
